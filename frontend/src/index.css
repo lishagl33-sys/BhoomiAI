@@ -1,0 +1,571 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    background-image: 
+      radial-gradient(at 15% 15%, rgba(16, 185, 129, 0.08) 0px, transparent 45%),
+      radial-gradient(at 85% 15%, rgba(6, 182, 212, 0.06) 0px, transparent 45%),
+      radial-gradient(at 50% 90%, rgba(15, 23, 42, 0.8) 0px, transparent 60%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  body.light-theme {
+    @apply bg-slate-50 text-slate-900;
+    background-image: 
+      radial-gradient(at 15% 15%, rgba(16, 185, 129, 0.06) 0px, transparent 45%),
+      radial-gradient(at 85% 15%, rgba(14, 165, 233, 0.05) 0px, transparent 45%);
+  }
+}
+
+/* ==========================================================================
+   Neo-Emerald Studio Design System Utilities
+   ========================================================================== */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 20px -5px rgba(16, 185, 129, 0.15);
+}
+
+.light-theme .glass-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  box-shadow: 0 4px 20px -2px rgba(16, 185, 129, 0.06);
+}
+
+.glass-card {
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(51, 65, 85, 0.6);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 14px 34px -4px rgba(0, 0, 0, 0.6), 0 0 20px -2px rgba(16, 185, 129, 0.2);
+  transform: translateY(-2px);
+}
+
+.light-theme .glass-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 12px -2px rgba(16, 185, 129, 0.05);
+}
+
+.light-theme .glass-card:hover {
+  border-color: #10b981;
+  box-shadow: 0 12px 28px -4px rgba(16, 185, 129, 0.15);
+}
+
+.card-elevated {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.5);
+}
+
+.light-theme .card-elevated {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 8px 24px -2px rgba(0, 0, 0, 0.06);
+}
+
+/* ==========================================================================
+   Light Mode Contrast & Typography Overrides
+   Ensures zero white-on-white text clipping across all cards, panels & inputs
+   ========================================================================== */
+
+/* Headings in light mode */
+.light-theme h1,
+.light-theme h2,
+.light-theme h3,
+.light-theme h4,
+.light-theme h5,
+.light-theme h6 {
+  color: #0f172a;
+}
+
+/* Hardcoded text-white elements become dark charcoal by default in light mode */
+.light-theme .text-white {
+  color: #0f172a !important;
+}
+
+/* Text color remaps for high legibility in light mode */
+.light-theme .text-slate-100,
+.light-theme .text-slate-200,
+.light-theme .text-slate-300 {
+  color: #334155 !important;
+}
+
+.light-theme .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Preserve bright white text ONLY on solid/gradient colored action buttons, badges and labels */
+.light-theme button.bg-emerald-600,
+.light-theme button.bg-emerald-600 *,
+.light-theme button.bg-emerald-500,
+.light-theme button.bg-emerald-500 *,
+.light-theme button.bg-teal-600,
+.light-theme button.bg-teal-600 *,
+.light-theme button.bg-pink-600,
+.light-theme button.bg-pink-600 *,
+.light-theme button.bg-rose-600,
+.light-theme button.bg-rose-600 *,
+.light-theme button.bg-indigo-600,
+.light-theme button.bg-indigo-600 *,
+.light-theme button.bg-blue-600,
+.light-theme button.bg-blue-600 *,
+.light-theme label.bg-emerald-600,
+.light-theme label.bg-emerald-600 *,
+.light-theme a.bg-emerald-600,
+.light-theme a.bg-emerald-600 *,
+.light-theme .btn-primary,
+.light-theme .btn-primary *,
+.light-theme button.bg-gradient-to-r,
+.light-theme button.bg-gradient-to-r *,
+.light-theme a.bg-gradient-to-r,
+.light-theme a.bg-gradient-to-r *,
+.light-theme .bg-gradient-to-r,
+.light-theme .bg-gradient-to-r *,
+.light-theme .badge-solid,
+.light-theme .badge-solid * {
+  color: #ffffff !important;
+}
+
+/* Secondary / glass buttons in light mode must NOT turn white on hover or focus */
+.light-theme .hover\:text-white:hover {
+  color: #0f172a !important;
+}
+
+/* Monospace metrics, KPI numbers and scores in cards */
+.light-theme .font-mono.text-white,
+.light-theme .text-2xl.font-black.text-white,
+.light-theme .text-3xl.font-black.text-white,
+.light-theme .text-xl.font-extrabold.text-white {
+  color: #0f172a !important;
+}
+
+/* Inner containers that were dark slate in dark mode */
+.light-theme .bg-slate-900,
+.light-theme .bg-slate-900\/90,
+.light-theme .bg-slate-900\/80,
+.light-theme .bg-slate-900\/70,
+.light-theme .bg-slate-900\/60,
+.light-theme .bg-slate-950,
+.light-theme .bg-slate-950\/80,
+.light-theme .bg-slate-950\/60,
+.light-theme .bg-slate-800,
+.light-theme .bg-slate-800\/80 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+/* Selectable category and option boxes in forms */
+.light-theme .border-slate-700.bg-slate-900\/90 {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #1e293b !important;
+}
+
+.light-theme .border-slate-700.bg-slate-900\/90:hover {
+  background-color: #f8fafc !important;
+  border-color: #10b981 !important;
+}
+
+.light-theme .border-slate-700.bg-slate-900\/90 * {
+  color: #1e293b !important;
+}
+
+/* Selected option card in light theme */
+.light-theme .border-emerald-400.bg-emerald-500\/25 {
+  background-color: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+}
+
+.light-theme .border-emerald-400.bg-emerald-500\/25 * {
+  color: #065f46 !important;
+}
+
+/* Form inputs, selects & textareas in light mode */
+.light-theme input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]),
+.light-theme select,
+.light-theme textarea {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.light-theme input::placeholder,
+.light-theme textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-theme select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Drag and drop upload zone in DocumentUpload */
+.light-theme .border-slate-600.bg-slate-950\/80 {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+.light-theme .border-slate-600.bg-slate-950\/80:hover {
+  background-color: #f0fdf4 !important;
+  border-color: #10b981 !important;
+}
+
+.light-theme .border-slate-600.bg-slate-950\/80 p,
+.light-theme .border-slate-600.bg-slate-950\/80 span {
+  color: #1e293b !important;
+}
+
+.light-theme .border-slate-600.bg-slate-950\/80 strong {
+  color: #047857 !important;
+}
+
+/* Verification Status & Category Breakdown Cards */
+.light-theme .bg-emerald-950\/40 {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #065f46 !important;
+}
+
+.light-theme .bg-emerald-950\/40 .text-emerald-300,
+.light-theme .bg-emerald-950\/40 .text-emerald-200,
+.light-theme .bg-emerald-950\/40 p {
+  color: #047857 !important;
+}
+
+.light-theme .bg-amber-950\/40 {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #92400e !important;
+}
+
+.light-theme .bg-amber-950\/40 .text-amber-300,
+.light-theme .bg-amber-950\/40 .text-amber-200,
+.light-theme .bg-amber-950\/40 p {
+  color: #b45309 !important;
+}
+
+.light-theme .bg-rose-950\/40,
+.light-theme .bg-rose-950\/60 {
+  background-color: #fff1f2 !important;
+  border-color: #fecdd3 !important;
+  color: #9f1239 !important;
+}
+
+.light-theme .bg-rose-950\/40 .text-rose-300,
+.light-theme .bg-rose-950\/40 .text-rose-200,
+.light-theme .bg-rose-950\/40 p {
+  color: #be123c !important;
+}
+
+/* Tables in light mode */
+.light-theme table thead tr {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+}
+
+.light-theme table thead th {
+  color: #475569 !important;
+}
+
+.light-theme table tbody tr {
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+.light-theme table tbody tr:hover {
+  background-color: #f8fafc !important;
+}
+
+.light-theme table tbody td {
+  color: #1e293b !important;
+}
+
+.light-theme table tbody td.text-white,
+.light-theme table tbody td span.text-white {
+  color: #0f172a !important;
+}
+
+/* Border color consistency */
+.light-theme .border-slate-800,
+.light-theme .border-slate-800\/80,
+.light-theme .border-slate-800\/60,
+.light-theme .border-slate-700,
+.light-theme .border-slate-700\/80,
+.light-theme .border-slate-700\/60,
+.light-theme .border-slate-600 {
+  border-color: #e2e8f0 !important;
+}
+
+.light-theme .divide-slate-800 > :not([hidden]) ~ :not([hidden]),
+.light-theme .divide-slate-800\/60 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+/* Radiant glow utilities */
+.glow-emerald {
+  box-shadow: 0 0 25px -3px rgba(16, 185, 129, 0.4);
+}
+
+.glow-teal {
+  box-shadow: 0 0 25px -3px rgba(20, 184, 166, 0.4);
+}
+
+.glow-cyan {
+  box-shadow: 0 0 25px -3px rgba(6, 182, 212, 0.4);
+}
+
+.glow-amber {
+  box-shadow: 0 0 20px -3px rgba(245, 158, 11, 0.35);
+}
+
+/* Gradient typography */
+.text-gradient-emerald {
+  background: linear-gradient(135deg, #6ee7b7 0%, #10b981 50%, #059669 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-cyan {
+  background: linear-gradient(135deg, #38bdf8 0%, #06b6d4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-rose {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Modern sleek scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #090d16;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(16, 185, 129, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(16, 185, 129, 0.7);
+}
+
+.light-theme ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.light-theme ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+
+/* Animation utilities */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+/* ==========================================================================
+   Leaflet & Leaflet.draw Precision GIS Overrides (Neo-Emerald Studio)
+   ========================================================================== */
+
+/* Crosshair cursor when drawing polygon / plot */
+.leaflet-container.leaflet-drawing,
+.leaflet-container.leaflet-drawing * {
+  cursor: crosshair !important;
+}
+
+.leaflet-draw-cursor {
+  cursor: crosshair !important;
+}
+
+/* Ensure official district boundary vectors remain transparent overlays */
+.district-boundary-overlay,
+.district-boundary-overlay path,
+svg.leaflet-zoom-animated g.district-boundaries path,
+path.leaflet-interactive.district-boundary-path {
+  pointer-events: none !important;
+}
+
+/* Cadastral parcel interactive hover glow */
+path.cadastral-parcel-path {
+  transition: stroke 0.2s ease, stroke-width 0.2s ease, fill-opacity 0.2s ease, filter 0.2s ease;
+  cursor: pointer !important;
+}
+
+path.cadastral-parcel-path:hover {
+  stroke-width: 3.5px !important;
+  fill-opacity: 0.55 !important;
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.8));
+}
+
+/* 🔵 User Location Pin & Pulsing Radar */
+.gps-user-pin-wrapper {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gps-user-pin-pulse {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: rgba(16, 185, 129, 0.4);
+  animation: gpsPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.gps-user-pin-dot {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background-color: #10b981;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+}
+
+@keyframes gpsPulse {
+  0% { transform: scale(0.9); opacity: 0.9; }
+  70% { transform: scale(2.6); opacity: 0; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* 🏷️ Survey Number Centered Badge */
+.survey-num-badge {
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  color: #34d399;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  pointer-events: none;
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.light-theme .survey-num-badge {
+  background: rgba(255, 255, 255, 0.95);
+  color: #047857;
+  border: 1px solid #10b981;
+}
+
+/* 🏠 Real-World Building Footprint Overlay */
+path.osm-building-path {
+  fill: #475569;
+  fill-opacity: 0.25;
+  stroke: #64748b;
+  stroke-width: 1.2px;
+  transition: fill-opacity 0.2s, stroke 0.2s;
+}
+
+path.osm-building-path:hover {
+  fill: #10b981;
+  fill-opacity: 0.6;
+  stroke: #34d399;
+  stroke-width: 2px;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.7));
+}
+
+/* 🟣 Imported Custom GeoJSON Boundaries */
+path.imported-boundary-path {
+  stroke: #8b5cf6;
+  stroke-width: 2.5px;
+  stroke-dasharray: 4, 4;
+  fill: #a78bfa;
+  fill-opacity: 0.25;
+}
+
+/* 🎯 Selected Plot Highlight & Dimmed State */
+path.cadastral-parcel-path.selected-highlight {
+  stroke: #34d399 !important;
+  stroke-width: 4px !important;
+  fill: #10b981 !important;
+  fill-opacity: 0.55 !important;
+  filter: drop-shadow(0 0 14px rgba(16, 185, 129, 0.95)) !important;
+}
+
+path.cadastral-parcel-path.dimmed {
+  opacity: 0.18 !important;
+  fill-opacity: 0.05 !important;
+}
+
+/* 🌙 Dark Mode Map Container & Controls */
+.dark-map-mode .leaflet-container {
+  background-color: #090d16 !important;
+}
+
+.dark-map-mode .leaflet-bar a {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-bottom: 1px solid #1e293b !important;
+}
+
+.dark-map-mode .leaflet-bar a:hover {
+  background-color: #1e293b !important;
+  color: #34d399 !important;
+}
+
+.dark-map-mode .leaflet-popup-content-wrapper,
+.dark-map-mode .leaflet-popup-tip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  color: #f1f5f9 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.8), 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.dark-map-mode .leaflet-control-scale-line {
+  background: rgba(15, 23, 42, 0.85) !important;
+  color: #94a3b8 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+/* 📐 Vertex Handles & Measurement Tooltips */
+.leaflet-editing-icon {
+  border-radius: 50% !important;
+  background: #10b981 !important;
+  border: 2px solid #ffffff !important;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.8) !important;
+}
+
+.measure-distance-tooltip {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border: 1px solid #10b981 !important;
+  color: #34d399 !important;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}

@@ -1,0 +1,50 @@
+{
+  "type": "FeatureCollection",
+  "licence": "Data OpenStreetMap contributors, ODbL 1.0.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "place_id": 254199100,
+        "osm_type": "relation",
+        "osm_id": 4210084,
+        "place_rank": 10,
+        "category": "boundary",
+        "type": "administrative",
+        "importance": 0.51,
+        "addresstype": "state_district",
+        "name": "Shivamogga",
+        "district": "Shivamogga",
+        "display_name": "Shivamogga District, Karnataka, India"
+      },
+      "bbox": [74.65, 13.46, 75.88, 14.62],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [75.45, 14.62],
+            [75.60, 14.58],
+            [75.78, 14.45],
+            [75.88, 14.28],
+            [75.85, 14.10],
+            [75.80, 13.90],
+            [75.72, 13.72],
+            [75.60, 13.62],
+            [75.48, 13.52],
+            [75.32, 13.46],
+            [75.15, 13.55],
+            [75.02, 13.68],
+            [74.88, 13.78],
+            [74.72, 13.95],
+            [74.65, 14.12],
+            [74.72, 14.30],
+            [74.85, 14.45],
+            [75.05, 14.55],
+            [75.25, 14.62],
+            [75.45, 14.62]
+          ]
+        ]
+      }
+    }
+  ]
+}

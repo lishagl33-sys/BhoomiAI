@@ -1,0 +1,47 @@
+
+# Dependencies
+node_modules/
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+dist/
+build/
+
+# Python files
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Python virtual environments and caches
+venv/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Node dependencies and build files
+node_modules/
+dist/
+build/
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# Local editor files
+.vscode/
+.DS_Store

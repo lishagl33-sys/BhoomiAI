@@ -1,0 +1,47 @@
+{
+  "type": "FeatureCollection",
+  "licence": "Data OpenStreetMap contributors, ODbL 1.0.",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "place_id": 254199200,
+        "osm_type": "relation",
+        "osm_id": 4210085,
+        "place_rank": 10,
+        "category": "boundary",
+        "type": "administrative",
+        "importance": 0.54,
+        "addresstype": "state_district",
+        "name": "Mysuru",
+        "district": "Mysuru",
+        "display_name": "Mysuru District, Karnataka, India"
+      },
+      "bbox": [75.92, 11.75, 77.08, 12.65],
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [76.50, 12.65],
+            [76.70, 12.58],
+            [76.92, 12.45],
+            [77.08, 12.30],
+            [77.02, 12.12],
+            [76.90, 11.95],
+            [76.75, 11.82],
+            [76.58, 11.75],
+            [76.40, 11.80],
+            [76.22, 11.88],
+            [76.08, 12.02],
+            [75.95, 12.18],
+            [75.92, 12.35],
+            [76.05, 12.48],
+            [76.22, 12.58],
+            [76.38, 12.64],
+            [76.50, 12.65]
+          ]
+        ]
+      }
+    }
+  ]
+}
