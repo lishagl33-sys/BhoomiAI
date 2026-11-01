@@ -365,7 +365,7 @@ export default function FieldInspectorMobile({ preselectedParcel }) {
                   }`}
                 >
                   <Send className="w-3.5 h-3.5" />
-                  <span>{submitting ? 'Anchoring to Blockchain...' : 'Submit Digital Attestation'}</span>
+                  <span>{submitting ? 'Submitting Attestation...' : 'Submit Digital Attestation'}</span>
                 </button>
 
               </div>
@@ -379,7 +379,7 @@ export default function FieldInspectorMobile({ preselectedParcel }) {
           </div>
         </div>
 
-        {/* Right 7 Cols: Detailed Field Officer Audit Panel & Blockchain Sync */}
+        {/* Right 7 Cols: Detailed Field Officer Audit Panel */}
         <div className="lg:col-span-7 space-y-4">
           
           {/* Recent Inspection Attestation Alert */}
@@ -397,7 +397,7 @@ export default function FieldInspectorMobile({ preselectedParcel }) {
               <p className="text-xs text-slate-300 leading-relaxed">
                 Field Officer <b className="text-white">{inspectionSuccess.inspector_name}</b> verified parcel within{' '}
                 <b className="text-emerald-400">{inspectionSuccess.distance_to_boundary_m.toFixed(1)}m</b> geofence. 
-                Cryptographic transaction block was automatically mined and appended to the Blockchain Mutation Ledger.
+                Inspection audit was verified and officially logged into the Land Registry.
               </p>
               <div className="p-2.5 rounded-xl bg-slate-950 font-mono text-[11px] text-cyan-300 border border-slate-800 flex items-center justify-between">
                 <span>Verified at: {new Date(inspectionSuccess.created_at).toLocaleString('en-IN')}</span>

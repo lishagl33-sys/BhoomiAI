@@ -1,0 +1,26 @@
+CEMO SPECIMEN - NOT AN OFFICIAL GOVERNMENT RECORD
+MUTATION REGISTER EXTRACT
+Illustrative Karnataka-style land-record sample for BhoomiVerify OCR and validation testing
+Important: All names, numbers, dates, village details and transaction references below are fictional and created only for software demonstration. This document is not issued, certified or authenticated by the Government of Karnataka.
+
+1. ADMINISTRATIVE & PARCEL DETAILS
+State: Karnataka | District: Tumakuru (DEMO DATA) | Taluk: Tumakuru | Hobli: Kasaba
+Village: Samplehalli (fictional village name) | Survey No: 128 | Surnoc: * | Hissa: A/2
+Land Extent: 1 Acre 20 Guntas (1.50 Acres) | Land Type: Dry Crop (Agricultural)
+Mutation Register Number: MR-DEMO-2026-0042 | Mutation Entry Date: 14 October 2026
+
+2. NATURE OF MUTATION
+Mutation Reason: Sale (illustrative transaction)
+Sale Deed No: DEMO-2026-1187 | Date: 02 October 2026
+Transaction Details: Transfer of recorded rights by registered sale
+
+3. PARTIES / RIGHTS TRANSFER
+Previous Holder (Transferor): Ravi Kumar (fictional person)
+New Holder (Transferee / Purchaser): Meera N. (fictional person)
+Extent Transferred: 1 Acre 20 Guntas (Full extent shown for demonstration)
+Share / Interest: 100%
+
+4. VERIFICATION / REMARKS
+Notice / Objection Status: No objection recorded in this demo scenario
+Mutation Status: Approved (Verified Statutory Record) | Certification Date: 20 October 2026
+Remarks: Authorized revenue transfer entry for testing BhoomiAI cross-verification and field matching.

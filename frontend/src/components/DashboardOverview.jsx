@@ -12,24 +12,16 @@ import {
   TrendingUp, 
   Activity, 
   ShieldCheck, 
-  Building, 
   Satellite, 
-  Link as LinkIcon, 
   Smartphone, 
   Filter, 
   RefreshCw, 
   MapPin, 
   UploadCloud,
   Check,
-  Warehouse,
-  Wheat,
-  Droplets,
-  Box,
-  Camera,
   FileCheck2
 } from 'lucide-react';
 import { getDashboardStats, getDistricts, getTaluks } from '../api';
-import { CROP_DATABASE, GRANARY_METRICS } from '../data/cropPhotos';
 
 export default function DashboardOverview({ stats: initialStats, setActiveTab, setSelectedRecordId, theme = 'dark' }) {
   const isLight = theme === 'light';
@@ -385,270 +377,68 @@ export default function DashboardOverview({ stats: initialStats, setActiveTab, s
         </div>
       </div>
 
-      {/* 🌾 KRISHI BHANDARA: SMART STATE AGRICULTURAL GRANARY & HARVEST RESERVES */}
-      <div className={`glass-card p-6 sm:p-8 rounded-3xl border shadow-xl space-y-6 ${
-        isLight ? 'border-amber-200 bg-white' : 'border-amber-500/30'
-      }`}>
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/15 border border-amber-500/30 text-amber-500">
-              <Warehouse className="w-3.5 h-3.5" />
-              <span>State Food Security &bull; Grain Buffer Storage Hub</span>
-            </div>
-            <h3 className={`text-xl font-black font-outfit ${isLight ? 'text-slate-900' : 'text-white'}`}>
-              Krishi Bhandara &amp; State Granary Reserves
-            </h3>
-            <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Real-time telemetry and harvest procurement linked directly to cadastral survey parcels across Davanagere, Tumakuru, Shivamogga &amp; Mysuru.
-            </p>
-          </div>
-
-          <button
-            onClick={() => setActiveTab('gis')}
-            className="px-4 py-2 bg-gradient-to-r from-amber-600 to-emerald-600 hover:from-amber-500 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-glow-sm transition flex items-center space-x-2"
-          >
-            <Layers className="w-4 h-4 text-white" />
-            <span>View Cadastral GIS &rarr;</span>
-          </button>
-        </div>
-
-        {/* Granary Overall Fill Gauge */}
-        <div className={`p-5 rounded-2xl border space-y-3 ${
-          isLight ? 'bg-amber-50/70 border-amber-200' : 'bg-amber-950/20 border-amber-500/30'
-        }`}>
-          <div className="flex flex-wrap justify-between items-center text-xs font-bold gap-2">
-            <span className="flex items-center gap-2 text-amber-500">
-              <Activity className="w-4 h-4" />
-              <span>Central Granary Capacity Utilization (Tumakuru Facility #04)</span>
-            </span>
-            <span className="font-mono text-sm px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-500 font-black">
-              {GRANARY_METRICS.occupancyPercent}% FULL
-            </span>
-          </div>
-
-          <div className="w-full h-3.5 rounded-full bg-slate-800/80 overflow-hidden p-0.5">
-            <div 
-              className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-amber-500 rounded-full transition-all duration-1000 shadow-sm"
-              style={{ width: `${GRANARY_METRICS.occupancyPercent}%` }}
-            />
-          </div>
-
-          <div className="flex flex-wrap justify-between text-[11px] text-slate-400 font-mono gap-2">
-            <span>Stored Harvest: <strong className={isLight ? 'text-slate-900' : 'text-white'}>{GRANARY_METRICS.currentStockQuintals.toLocaleString()} Quintals</strong></span>
-            <span>Procured Value (MSP): <strong className="text-emerald-500">₹4.12 Crore</strong></span>
-            <span>Total Buffer Capacity: <strong className={isLight ? 'text-slate-900' : 'text-white'}>{GRANARY_METRICS.totalCapacityQuintals.toLocaleString()} Quintals</strong></span>
-          </div>
-        </div>
-
-        {/* 3 Dedicated Silos */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {GRANARY_METRICS.silos.map(silo => (
-            <div 
-              key={silo.id} 
-              className={`p-4 rounded-2xl border transition hover:shadow-lg space-y-3 ${
-                isLight ? 'bg-slate-50 border-slate-200 hover:border-emerald-500' : 'bg-slate-900/60 border-slate-800 hover:border-emerald-500/50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: silo.color }}></div>
-                  <span className="text-xs font-black uppercase font-mono">{silo.id}</span>
-                </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 font-bold border border-emerald-500/30">
-                  {silo.fillPercent}% Fill
-                </span>
-              </div>
-
-              <div>
-                <div className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-white'}`}>{silo.name}</div>
-                <div className="text-[11px] text-emerald-500 font-medium">{silo.crop}</div>
-              </div>
-
-              <div className={`space-y-1.5 text-[11px] pt-2 border-t ${isLight ? 'border-slate-200 text-slate-600' : 'border-slate-800 text-slate-400'}`}>
-                <div className="flex justify-between">
-                  <span>Current Stock:</span>
-                  <span className={`font-mono font-bold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>{silo.storedQuintals} Qtl</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Silo Telemetry:</span>
-                  <span className="font-mono">{silo.temperatureC}°C &bull; {silo.moisturePercent}% Moisture</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Inspection Status:</span>
-                  <span className="text-emerald-500 font-semibold">{silo.status}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* 📸 CULTIVATED CROPS & AGRICULTURAL LAND PHOTOGRAPHY SHOWCASE */}
-      <div className={`glass-card p-6 sm:p-8 rounded-3xl border shadow-xl space-y-5 ${
-        isLight ? 'border-slate-200 bg-white' : 'border-slate-800'
-      }`}>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 mb-1">
-              <Camera className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Ground Photogrammetry &bull; Certified Plots</span>
-            </div>
-            <h3 className={`text-lg font-black font-outfit ${isLight ? 'text-slate-900' : 'text-white'}`}>
-              Standing Crops &amp; Agricultural Land Showcase
-            </h3>
-            <p className={`text-xs ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-              Photographic field documentation and agronomic metrics of verified parcels in Davanagere, Tumakuru, Shivamogga &amp; Mysuru.
-            </p>
-          </div>
-
-          <button
-            onClick={() => setActiveTab('gis')}
-            className={`text-xs font-bold hover:underline ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}
-          >
-            Explore Farmlands in Cadastral GIS &rarr;
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Object.values(CROP_DATABASE).slice(0, 4).map((crop, idx) => (
-            <div 
-              key={idx}
-              onClick={() => setActiveTab('gis')}
-              className={`rounded-2xl border overflow-hidden cursor-pointer transition hover:-translate-y-1 group shadow-md ${
-                isLight ? 'bg-slate-50 border-slate-200 hover:border-emerald-500' : 'bg-slate-900/60 border-slate-800 hover:border-emerald-500/50'
-              }`}
-            >
-              <div className="relative h-32 w-full overflow-hidden bg-slate-800">
-                <img 
-                  src={crop.photos[0].url} 
-                  alt={crop.name} 
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-2.5">
-                  <div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500 text-white font-mono">
-                      {crop.category}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3.5 space-y-1.5">
-                <div className={`font-bold text-xs truncate ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                  {crop.name}
-                </div>
-                <div className="text-[10px] text-emerald-500 font-medium">
-                  {crop.kannadaName}
-                </div>
-                <p className={`text-[11px] line-clamp-2 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
-                  {crop.description}
-                </p>
-
-                <div className={`pt-2 border-t flex justify-between items-center text-[10px] font-mono ${
-                  isLight ? 'border-slate-200 text-slate-500' : 'border-slate-800 text-slate-400'
-                }`}>
-                  <span>Avg Yield: {crop.averageYield.split('/')[0]}</span>
-                  <span className="text-emerald-500 font-bold">{crop.mspValue.split('/')[0]}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* Analytics & Activity Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Geographic Distribution & Preserved Modules */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* District Distribution */}
-          <div className={`glass-card p-6 rounded-2xl border shadow-xl space-y-4 ${
-            isLight ? 'border-slate-200 bg-white' : 'border-slate-800'
-          }`}>
-            <div className={`flex items-center justify-between pb-3 border-b ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-              <h3 className={`text-sm font-bold font-outfit flex items-center space-x-2 ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                <Building className="w-4 h-4 text-emerald-500" />
-                <span>Parcels by Revenue District</span>
-              </h3>
-              <span className={`text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Davanagere, Tumakuru, Shivamogga &amp; Mysuru Pilot</span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {stats.district_distribution?.map((d, i) => (
-                <div key={i} className={`p-4 rounded-xl flex justify-between items-center ${
-                  isLight ? 'bg-slate-50 border border-slate-200' : 'bg-slate-900/60 border border-slate-800'
-                }`}>
-                  <div>
-                    <p className={`text-xs font-bold ${isLight ? 'text-slate-900' : 'text-slate-200'}`}>{d.district}</p>
-                    <p className={`text-[10px] ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>Revenue Division</p>
-                  </div>
-                  <span className={`text-xs font-bold px-2.5 py-1 rounded-lg font-mono border ${
-                    isLight 
-                      ? 'text-emerald-800 bg-emerald-50 border-emerald-300' 
-                      : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
-                  }`}>
-                    {d.count} parcels
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* High-Tech Capabilities Grid (4 Modules) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Left 2 Cols: Platform Core Capabilities Modules */}
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 h-full">
             <div 
               onClick={() => setActiveTab('verification')}
-              className={`glass-card p-4 rounded-2xl border cursor-pointer shadow-lg transition space-y-2 group ${
+              className={`glass-card p-5 rounded-2xl border cursor-pointer shadow-lg transition space-y-3 group flex flex-col justify-between ${
                 isLight ? 'border-emerald-300 bg-emerald-50/50 hover:border-emerald-500' : 'border-emerald-500/40 bg-emerald-950/20 hover:border-emerald-400'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <FileCheck2 className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition" />
-                <ArrowUpRight className={`w-3.5 h-3.5 transition ${isLight ? 'text-slate-400 group-hover:text-emerald-600' : 'text-slate-500 group-hover:text-emerald-400'}`} />
+              <div>
+                <div className="flex items-center justify-between">
+                  <FileCheck2 className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition" />
+                  <ArrowUpRight className={`w-4 h-4 transition ${isLight ? 'text-slate-400 group-hover:text-emerald-600' : 'text-slate-500 group-hover:text-emerald-400'}`} />
+                </div>
+                <div className={`font-bold text-sm mt-3 ${isLight ? 'text-slate-900' : 'text-white'}`}>Verification Engine</div>
+                <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Automated RTC and survey document verification against authoritative reference cadastre with discrepancy scoring.
+                </p>
               </div>
-              <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>Verification Engine</div>
-              <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Automated RTC and survey document verification against reference cadastre.</p>
+              <span className={`text-xs font-semibold ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>Launch Engine &rarr;</span>
             </div>
 
             <div 
               onClick={() => setActiveTab('gis')}
-              className={`glass-card p-4 rounded-2xl border cursor-pointer shadow-lg transition space-y-2 group ${
+              className={`glass-card p-5 rounded-2xl border cursor-pointer shadow-lg transition space-y-3 group flex flex-col justify-between ${
                 isLight ? 'border-slate-200 bg-white hover:border-emerald-500' : 'border-slate-800 hover:border-emerald-500/50'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <Satellite className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition" />
-                <ArrowUpRight className={`w-3.5 h-3.5 transition ${isLight ? 'text-slate-400 group-hover:text-emerald-600' : 'text-slate-500 group-hover:text-emerald-400'}`} />
+              <div>
+                <div className="flex items-center justify-between">
+                  <Satellite className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition" />
+                  <ArrowUpRight className={`w-4 h-4 transition ${isLight ? 'text-slate-400 group-hover:text-emerald-600' : 'text-slate-500 group-hover:text-emerald-400'}`} />
+                </div>
+                <div className={`font-bold text-sm mt-3 ${isLight ? 'text-slate-900' : 'text-white'}`}>Cadastral GIS Map</div>
+                <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  Boundary overlays, satellite and normal map viewing, village navigation, and interactive land parcel selection.
+                </p>
               </div>
-              <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>Cadastral GIS Map</div>
-              <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Boundary overlays, satellite view, and land plot inspection.</p>
+              <span className={`text-xs font-semibold ${isLight ? 'text-emerald-700' : 'text-emerald-400'}`}>Open Map &rarr;</span>
             </div>
 
-            <div 
-              onClick={() => setActiveTab('blockchain')}
-              className={`glass-card p-4 rounded-2xl border cursor-pointer shadow-lg transition space-y-2 group ${
-                isLight ? 'border-slate-200 bg-white hover:border-emerald-500' : 'border-slate-800 hover:border-emerald-500/50'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <LinkIcon className="w-5 h-5 text-teal-500 group-hover:scale-110 transition" />
-                <ArrowUpRight className={`w-3.5 h-3.5 transition ${isLight ? 'text-slate-400 group-hover:text-emerald-600' : 'text-slate-500 group-hover:text-teal-400'}`} />
-              </div>
-              <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>Blockchain Ledger</div>
-              <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>Immutable SHA-256 mutation blocks for tamper-proof titles.</p>
-            </div>
+
 
             <div 
               onClick={() => setActiveTab('field-inspector')}
-              className={`glass-card p-4 rounded-2xl border cursor-pointer shadow-lg transition space-y-2 group ${
+              className={`glass-card p-5 rounded-2xl border cursor-pointer shadow-lg transition space-y-3 group flex flex-col justify-between ${
                 isLight ? 'border-slate-200 bg-white hover:border-emerald-500' : 'border-slate-800 hover:border-emerald-500/50'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <Smartphone className="w-5 h-5 text-cyan-500 group-hover:scale-110 transition" />
-                <ArrowUpRight className={`w-3.5 h-3.5 transition ${isLight ? 'text-slate-400 group-hover:text-emerald-600' : 'text-slate-500 group-hover:text-cyan-400'}`} />
+              <div>
+                <div className="flex items-center justify-between">
+                  <Smartphone className="w-6 h-6 text-cyan-500 group-hover:scale-110 transition" />
+                  <ArrowUpRight className={`w-4 h-4 transition ${isLight ? 'text-slate-400 group-hover:text-emerald-600' : 'text-slate-500 group-hover:text-cyan-400'}`} />
+                </div>
+                <div className={`font-bold text-sm mt-3 ${isLight ? 'text-slate-900' : 'text-white'}`}>Field Inspector Mobile</div>
+                <p className={`text-xs mt-1 leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                  On-site GPS geofencing, physical boundary stone inspection, and geo-tagged photo audits.
+                </p>
               </div>
-              <div className={`font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>Field Inspector Mobile</div>
-              <p className={`text-[11px] ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>On-site GPS geofencing &amp; boundary stone inspection.</p>
+              <span className={`text-xs font-semibold ${isLight ? 'text-cyan-700' : 'text-cyan-400'}`}>Open Inspector &rarr;</span>
             </div>
           </div>
         </div>
@@ -702,7 +492,7 @@ export default function DashboardOverview({ stats: initialStats, setActiveTab, s
                     isLight ? 'text-slate-500 border-slate-200' : 'text-slate-400 border-slate-800/60'
                   }`}>
                     <span>Extent: {item.area}</span>
-                    <span className={`font-mono text-[10px] ${isLight ? 'text-emerald-700 font-semibold' : 'text-emerald-400'}`}>⛓️ {item.blockchain_tx}</span>
+                    <span className={`font-mono text-[10px] ${isLight ? 'text-emerald-700 font-semibold' : 'text-emerald-400'}`}>Sy No: {item.survey_number || 'N/A'}</span>
                   </div>
                 </div>
               ))}

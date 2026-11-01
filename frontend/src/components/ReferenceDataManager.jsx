@@ -202,7 +202,7 @@ export default function ReferenceDataManager() {
               <div className="text-[11px] font-bold text-rose-300">Rejected Row Issues:</div>
               {importResult.errors.map((err, idx) => (
                 <div key={idx} className="text-[11px] text-rose-300 font-mono">
-                  Row {err.row}: {err.error}
+                  Row {err.row}{err.survey && err.survey !== 'N/A' ? ` (Sy ${err.survey})` : ''}: {err.error || (Array.isArray(err.errors) ? err.errors.join('; ') : 'Validation issue')}
                 </div>
               ))}
             </div>

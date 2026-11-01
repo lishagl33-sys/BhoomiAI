@@ -11,8 +11,9 @@ import MismatchAnalysis from './components/MismatchAnalysis';
 import RecordManager from './components/RecordManager';
 import ReportModal from './components/ReportModal';
 import GisMapViewer from './components/GisMapViewer';
-import BlockchainLedger from './components/BlockchainLedger';
 import FieldInspectorMobile from './components/FieldInspectorMobile';
+import BhoomiAssistant from './components/BhoomiAssistant';
+import { Sparkles, MessageSquare, X } from 'lucide-react';
 import { getDashboardStats } from './api';
 
 class ErrorBoundary extends React.Component {
@@ -66,6 +67,9 @@ export default function App() {
   const [reportModalRecordId, setReportModalRecordId] = useState(null);
   const [preselectedParcelForInspection, setPreselectedParcelForInspection] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('bhoomi_theme') || 'dark');
+  const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
+  const [selectedParcelForChat, setSelectedParcelForChat] = useState(null);
+  const [navigatedMapTarget, setNavigatedMapTarget] = useState(null);
 
   useEffect(() => {
     fetchStats();
@@ -116,6 +120,12 @@ export default function App() {
     setActiveTab('field-inspector');
   };
 
+  const handleNavigateFromChat = (action) => {
+    setNavigatedMapTarget(action);
+    setActiveTab('gis');
+    setIsFloatingChatOpen(false);
+  };
+
   return (
     <div className={`min-h-screen flex flex-col font-['Plus_Jakarta_Sans',sans-serif] transition-colors duration-300 ${
       theme === 'dark' 
@@ -134,11 +144,21 @@ export default function App() {
       {/* Main Content Workspace */}
       <ErrorBoundary onReset={() => setActiveTab('dashboard')}>
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {activeTab === 'chat' && (
+          <BhoomiAssistant 
+            theme={theme}
+            onNavigateToLocation={handleNavigateFromChat}
+            selectedParcelContext={selectedParcelForChat}
+          />
+        )}
+
         {activeTab === 'gis' && (
           <GisMapViewer 
             onSelectParcelForInspection={handleSelectParcelForInspection}
             globalTheme={theme}
             onToggleGlobalTheme={toggleTheme}
+            externalNavTarget={navigatedMapTarget}
+            onParcelSelect={(p) => setSelectedParcelForChat(p)}
           />
         )}
 
@@ -179,9 +199,6 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'blockchain' && (
-          <BlockchainLedger theme={theme} />
-        )}
 
         {activeTab === 'field-inspector' && (
           <FieldInspectorMobile 
@@ -226,6 +243,48 @@ export default function App() {
         />
       )}
 
+      {/* Floating ChatGPT Assistant Modal Window */}
+      {isFloatingChatOpen && (
+        <div className="fixed bottom-24 right-3 sm:right-6 z-50 w-[95vw] sm:w-[500px] shadow-2xl rounded-2xl animate-fadeIn">
+          <BhoomiAssistant
+            theme={theme}
+            isFloatingModal={true}
+            onCloseModal={() => setIsFloatingChatOpen(false)}
+            onExpandToFullTab={() => {
+              setIsFloatingChatOpen(false);
+              setActiveTab('chat');
+            }}
+            onNavigateToLocation={handleNavigateFromChat}
+            selectedParcelContext={selectedParcelForChat}
+          />
+        </div>
+      )}
+
+      {/* Floating AI Assistant Launcher Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          type="button"
+          onClick={() => setIsFloatingChatOpen(prev => !prev)}
+          className={`group flex items-center gap-2.5 px-4 py-3 rounded-full shadow-2xl transition-all duration-300 transform hover:scale-105 border-2 ${
+            isFloatingChatOpen
+              ? 'bg-emerald-700 text-white border-emerald-400 ring-4 ring-emerald-500/30'
+              : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white border-emerald-300/40 shadow-emerald-600/30 ring-2 ring-emerald-400/20'
+          }`}
+          title="Open BhoomiAI ChatGPT Assistant"
+        >
+          <div className="relative">
+            <Sparkles className="w-5 h-5 text-emerald-200 animate-spin" style={{ animationDuration: '6s' }} />
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-300 rounded-full animate-ping" />
+          </div>
+          <span className="font-extrabold text-xs sm:text-sm tracking-tight">
+            {isFloatingChatOpen ? 'Close Assistant' : 'Ask BhoomiAI'}
+          </span>
+          <span className="hidden sm:inline-block px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 text-white">
+            AI 💬
+          </span>
+        </button>
+      </div>
+
       {/* Footer */}
       <footer className={`border-t mt-16 py-6 transition-colors duration-300 ${
         theme === 'dark' 
@@ -243,7 +302,7 @@ export default function App() {
             </span>
           </div>
           <div className="flex flex-wrap items-center space-x-3 text-[11px] text-slate-400">
-            <span>FastAPI &bull; Indic OCR &bull; Cadastral GIS &bull; Blockchain Ledger &bull; React &bull; Tailwind</span>
+            <span>FastAPI &bull; Indic OCR &bull; Cadastral GIS &bull; React &bull; Tailwind</span>
             <span className="text-emerald-500">&bull;</span>
             <span className="text-emerald-400 font-semibold">Karnataka Pilot: Davanagere, Tumakuru, Shivamogga &amp; Mysuru</span>
           </div>

@@ -4,12 +4,34 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = BASE_DIR.parent
 
+# Load .env file automatically if present
+for env_candidate in [BASE_DIR / ".env", PROJECT_DIR / ".env"]:
+    if env_candidate.exists():
+        try:
+            with open(env_candidate, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        k, v = k.strip(), v.strip().strip("'\"")
+                        if k and k not in os.environ:
+                            os.environ[k] = v
+        except Exception:
+            pass
+
+# AI Assistant Settings (OpenAI)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip()
+CHAT_RATE_LIMIT_PER_MINUTE = int(os.getenv("CHAT_RATE_LIMIT_PER_MINUTE", "30"))
+CHAT_MAX_MESSAGE_LENGTH = int(os.getenv("CHAT_MAX_MESSAGE_LENGTH", "4000"))
+
 # Storage folders
 UPLOAD_DIR = BASE_DIR / "uploads"
 PROCESSED_DIR = BASE_DIR / "processed"
 SAMPLES_DIR = BASE_DIR / "samples"
 REPORTS_DIR = BASE_DIR / "reports"
 TEMPLATES_DIR = BASE_DIR / "templates"
+
 
 for dir_path in [UPLOAD_DIR, PROCESSED_DIR, SAMPLES_DIR, REPORTS_DIR, TEMPLATES_DIR]:
     dir_path.mkdir(parents=True, exist_ok=True)

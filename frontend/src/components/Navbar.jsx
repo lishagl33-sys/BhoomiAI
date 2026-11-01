@@ -5,7 +5,6 @@ import {
   ShieldCheck, 
   FolderSearch,
   Satellite,
-  Link as LinkIcon,
   Smartphone,
   CheckCircle2,
   Database,
@@ -25,6 +24,13 @@ export default function Navbar({ activeTab, setActiveTab, stats, theme = 'dark',
       id: 'dashboard', 
       label: 'Dashboard', 
       icon: LayoutDashboard 
+    },
+    { 
+      id: 'chat', 
+      label: 'AI Assistant', 
+      icon: Sparkles,
+      badge: 'ChatGPT-AI',
+      badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
     },
     { 
       id: 'gis', 
@@ -57,13 +63,7 @@ export default function Navbar({ activeTab, setActiveTab, stats, theme = 'dark',
       label: 'Land Registry', 
       icon: FolderSearch 
     },
-    { 
-      id: 'blockchain', 
-      label: 'Blockchain Ledger', 
-      icon: LinkIcon,
-      badge: stats?.total_blockchain_blocks ? `${stats.total_blockchain_blocks} blocks` : null,
-      badgeColor: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-    },
+
     { 
       id: 'field-inspector', 
       label: 'Field Inspector Mobile', 

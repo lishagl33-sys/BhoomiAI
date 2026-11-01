@@ -1,0 +1,24 @@
+CEMO SPECIMEN - NOT AN OFFICIAL GOVERNMENT SURVEY RECORD
+TIPPAN / CADASTRAL SURVEY SKETCH (FMB)
+Karnataka-style illustrative layout for BhoomiVerify document upload and OCR testing
+Notice: All administrative details, survey identifiers, measurements and boundary annotations below are fictional. This is an illustrative layout for software demonstration.
+
+1. LAND IDENTIFICATION DETAILS
+State: Karnataka | District: Tumakuru (DEMO) | Taluk: Tumakuru (DEMO) | Hobli: Kasaba (DEMO)
+Village: Samplehalli (fictional) | Survey No: 128 (DEMO) | Surnoc: * | Hissa: A/2 (DEMO)
+Survey Basis: BV-TIP-2026-001 (DEMO) | Land Extent: 1 Acre 20 Guntas (1.50 Acres)
+
+2. PARCEL SKETCH & BOUNDARY MEASUREMENTS (NOT TO SCALE)
+Survey Parcel: 128 / A/2
+North Side: 94.5 m adjoining SURVEY No. 127
+South Side: 94.0 m adjoining SURVEY No. 129
+East Side: 151.5 m adjoining SURVEY No. 130
+West Side: 151.0 m adjoining SURVEY No. 128/1
+
+3. BOUNDARY / ADJOINING SURVEY SUMMARY
+North Boundary: SURVEY No. 127 - ADJOINING
+South Boundary: SURVEY No. 129 - ADJOINING
+East Boundary: SURVEY No. 130 - ADJOINING
+West Boundary: SURVEY No. 128/1 - ADJOINING
+Department: Survey Settlement and Land Records (SSLR) Directorate, Karnataka
+Status: Authorized Cadastral Survey Boundary Sketch

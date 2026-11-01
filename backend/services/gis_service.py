@@ -115,14 +115,37 @@ class GISService:
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         return round(R * c, 2)
 
-    def check_encroachment(self, candidate_poly: List[List[float]], existing_records: List[Any]) -> Dict[str, Any]:
-        """Checks if candidate parcel boundaries overlap with existing surveyed parcels."""
+    def check_encroachment(
+        self,
+        candidate_poly: List[List[float]],
+        existing_records: List[Any],
+        candidate_survey: Optional[str] = None,
+        candidate_village: Optional[str] = None,
+        candidate_record_id: Optional[Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Checks if candidate parcel boundaries overlap with existing surveyed parcels.
+        Prevents false-positive self-encroachment when re-uploading or updating the same parcel.
+        """
         if not candidate_poly or len(candidate_poly) < 4:
             return {"encroachment_detected": False, "details": "No GIS boundary polygon available"}
 
         cand_nw = candidate_poly[0]
+        c_survey = str(candidate_survey).strip().lower() if candidate_survey else ""
+        c_village = str(candidate_village).strip().lower() if candidate_village else ""
 
         for rec in existing_records:
+            # 1. Skip if this is the exact same record ID
+            rec_id = getattr(rec, "id", None)
+            if candidate_record_id is not None and rec_id == candidate_record_id:
+                continue
+
+            # 2. Skip if this is the exact same parcel survey number and village (re-upload or duplicate document)
+            rec_survey = str(getattr(rec, "survey_number", "")).strip().lower()
+            rec_village = str(getattr(rec, "village", "")).strip().lower()
+            if c_survey and c_village and rec_survey == c_survey and rec_village == c_village:
+                continue
+
             poly_str = getattr(rec, "polygon_coordinates", None)
             if not poly_str:
                 continue
@@ -130,10 +153,11 @@ class GISService:
                 exist_poly = json.loads(poly_str)
                 exist_nw = exist_poly[0]
                 dist = self.haversine_distance_meters(cand_nw[0], cand_nw[1], exist_nw[0], exist_nw[1])
-                if dist < 20.0 and getattr(rec, "id", None) != getattr(candidate_poly, "id", None):
+                # True encroachment occurs when a DIFFERENT parcel overlaps within 20m
+                if dist < 20.0:
                     return {
                         "encroachment_detected": True,
-                        "conflict_record_id": getattr(rec, "id"),
+                        "conflict_record_id": rec_id,
                         "conflict_survey": getattr(rec, "survey_number"),
                         "conflict_owner": getattr(rec, "owner_name"),
                         "overlap_distance_m": dist,

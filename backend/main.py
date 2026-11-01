@@ -14,7 +14,7 @@ from typing import List, Optional
 from fastapi import FastAPI, UploadFile, File, Form, Depends, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -22,7 +22,8 @@ from config import (
     UPLOAD_DIR, PROCESSED_DIR, SAMPLES_DIR, REPORTS_DIR,
     CORS_ORIGINS, BASE_DIR, APP_NAME, APP_SUBTITLE, APP_VERSION,
     GEOFENCE_MAX_DISTANCE_METERS, MAX_UPLOAD_SIZE_BYTES,
-    SUPPORTED_KARNATAKA_DISTRICTS, PROTOTYPE_DISCLAIMER
+    SUPPORTED_KARNATAKA_DISTRICTS, PROTOTYPE_DISCLAIMER,
+    OPENAI_MODEL, CHAT_RATE_LIMIT_PER_MINUTE, CHAT_MAX_MESSAGE_LENGTH
 )
 from database import engine, get_db, Base
 from models import (
@@ -31,9 +32,12 @@ from models import (
     BlockchainBlock, FieldInspectionLog,
     District, Taluk, Hobli, Village,
     ReferenceParcel, VerificationResult, ReferenceImportAudit,
-    LandParcel, LandRecordDocument
+    LandParcel, LandRecordDocument,
+    ChatConversation, ChatMessage
 )
 import schemas
+from services.ai_chat_service import AIChatService
+
 from services.ocr_service import ocr_service
 from services.indic_ocr_service import indic_ocr_service
 from services.nlp_extractor import nlp_extractor
@@ -1563,6 +1567,44 @@ def get_verification_result(document_id: int, db: Session = Depends(get_db)):
     comparisons = json.loads(res.field_comparisons_json) if res.field_comparisons_json else []
     warnings = json.loads(res.warnings_json) if res.warnings_json else []
 
+    doc = res.document
+    rec = res.record
+    ext_fields = {}
+    if rec:
+        ext_fields = {
+            "state": rec.state,
+            "district": rec.district,
+            "taluk": rec.taluk,
+            "hobli": rec.hobli,
+            "village": rec.village,
+            "survey_number": rec.survey_number,
+            "surnoc": rec.surnoc,
+            "hissa_number": rec.hissa_number,
+            "record_year": rec.record_year,
+            "record_type": rec.record_type,
+            "owner_name": rec.owner_name,
+            "relative_name": rec.relative_name,
+            "area_value": rec.area_value,
+            "area_unit": rec.area_unit,
+            "area_in_acres": rec.area_in_acres,
+            "land_type": rec.land_type,
+            "mutation_number": rec.mutation_number,
+            "registration_date": rec.registration_date,
+            "source_department": rec.source_department
+        }
+    elif doc:
+        ext_fields = {
+            "district": doc.district,
+            "taluk": doc.taluk,
+            "hobli": doc.hobli,
+            "village": doc.village,
+            "survey_number": doc.survey_number,
+            "surnoc": doc.surnoc,
+            "hissa_number": doc.hissa_number,
+            "record_year": doc.record_year,
+            "record_type": doc.record_type
+        }
+
     return {
         "id": res.id,
         "document_id": res.document_id,
@@ -1574,7 +1616,12 @@ def get_verification_result(document_id: int, db: Session = Depends(get_db)):
         "warnings": warnings,
         "reference_source_details": res.reference_source_details,
         "verified_at": res.verified_at,
-        "reference_parcel": res.reference_parcel
+        "reference_parcel": res.reference_parcel,
+        "document_filename": doc.filename if doc else None,
+        "document_category": doc.document_category if doc else None,
+        "extracted_fields": ext_fields,
+        "blockchain_hash": rec.blockchain_tx_hash if rec else None,
+        "raw_ocr_text": doc.raw_ocr_text if doc else None
     }
 
 
@@ -1594,6 +1641,43 @@ def get_all_verifications(
     for res in results:
         comparisons = json.loads(res.field_comparisons_json) if res.field_comparisons_json else []
         warnings = json.loads(res.warnings_json) if res.warnings_json else []
+        doc = res.document
+        rec = res.record
+        ext_fields = {}
+        if rec:
+            ext_fields = {
+                "state": rec.state,
+                "district": rec.district,
+                "taluk": rec.taluk,
+                "hobli": rec.hobli,
+                "village": rec.village,
+                "survey_number": rec.survey_number,
+                "surnoc": rec.surnoc,
+                "hissa_number": rec.hissa_number,
+                "record_year": rec.record_year,
+                "record_type": rec.record_type,
+                "owner_name": rec.owner_name,
+                "relative_name": rec.relative_name,
+                "area_value": rec.area_value,
+                "area_unit": rec.area_unit,
+                "area_in_acres": rec.area_in_acres,
+                "land_type": rec.land_type,
+                "mutation_number": rec.mutation_number,
+                "registration_date": rec.registration_date,
+                "source_department": rec.source_department
+            }
+        elif doc:
+            ext_fields = {
+                "district": doc.district,
+                "taluk": doc.taluk,
+                "hobli": doc.hobli,
+                "village": doc.village,
+                "survey_number": doc.survey_number,
+                "surnoc": doc.surnoc,
+                "hissa_number": doc.hissa_number,
+                "record_year": doc.record_year,
+                "record_type": doc.record_type
+            }
         out.append({
             "id": res.id,
             "document_id": res.document_id,
@@ -1605,7 +1689,12 @@ def get_all_verifications(
             "warnings": warnings,
             "reference_source_details": res.reference_source_details,
             "verified_at": res.verified_at,
-            "reference_parcel": res.reference_parcel
+            "reference_parcel": res.reference_parcel,
+            "document_filename": doc.filename if doc else None,
+            "document_category": doc.document_category if doc else None,
+            "extracted_fields": ext_fields,
+            "blockchain_hash": rec.blockchain_tx_hash if rec else None,
+            "raw_ocr_text": doc.raw_ocr_text if doc else None
         })
     return out
 
@@ -1629,6 +1718,9 @@ async def upload_document(
     hissa_number: Optional[str] = Form("1"),
     record_year: Optional[str] = Form("2024-2025"),
     record_type: Optional[str] = Form("CURRENT_RTC"),
+    owner_name: Optional[str] = Form(None),
+    area_value: Optional[str] = Form(None),
+    area_unit: Optional[str] = Form("Acres"),
     supporting_files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db)
 ):
@@ -1639,7 +1731,7 @@ async def upload_document(
     def _clean_str(val, fallback=""):
         if val is None or hasattr(val, "default"):
             return fallback
-        return str(val)
+        return str(val).strip()
 
     document_category = _clean_str(document_category, "RTC / Pahani (Form 16)")
     source_department = _clean_str(source_department, "Revenue Department (RTC)")
@@ -1653,6 +1745,24 @@ async def upload_document(
     hissa_number = _clean_str(hissa_number, "1")
     record_year = _clean_str(record_year, "2024-2025")
     record_type = _clean_str(record_type, "CURRENT_RTC")
+    owner_name = _clean_str(owner_name, "") or None
+    area_value = _clean_str(area_value, "") or None
+    area_unit = _clean_str(area_unit, "Acres")
+
+    user_hints = {
+        "district": district,
+        "taluk": taluk,
+        "hobli": hobli,
+        "village": village,
+        "survey_number": survey_number,
+        "surnoc": surnoc,
+        "hissa_number": hissa_number,
+        "record_year": record_year,
+        "record_type": record_type,
+        "owner_name": owner_name,
+        "area_value": area_value,
+        "area_unit": area_unit
+    }
 
     content_bytes = await file.read()
     file_size = len(content_bytes)
@@ -1668,9 +1778,8 @@ async def upload_document(
     with open(upload_path, "wb") as buffer:
         buffer.write(content_bytes)
 
-    sample_txt = SAMPLES_DIR / (Path(file.filename).stem + ".txt")
-    if sample_txt.exists():
-        shutil.copy(sample_txt, upload_path.with_suffix(".txt"))
+    # Only use companion txt if uploaded directly or explicit test sample; do not blind copy
+    # sample_txt from samples directory to ensure genuine OCR runs on user's uploaded images.
 
     target_image_path = upload_path
     if file_ext == ".pdf":
@@ -1685,8 +1794,8 @@ async def upload_document(
         except Exception:
             pass
 
-    # 1. OCR extraction
-    ocr_result = ocr_service.run_ocr(target_image_path)
+    # 1. OCR extraction with user form hints
+    ocr_result = ocr_service.run_ocr(target_image_path, user_hints=user_hints)
     raw_text = ocr_result["raw_text"]
 
     # 2. Multi-Lingual Indic Parsing
@@ -1695,31 +1804,40 @@ async def upload_document(
     detected_lang = language
 
     if language != "en" and (language != "auto" or any(ord(c) > 127 for c in raw_text)):
-        extracted_fields, field_confidences, detected_lang = indic_ocr_service.parse_indic_document(raw_text, language)
+        extracted_fields, field_confidences, detected_lang = indic_ocr_service.parse_indic_document(raw_text, language, user_hints=user_hints)
 
     # If Indic parsing returned fields, use them, otherwise use standard NLP extractor
-    if not extracted_fields or "owner_name" not in extracted_fields:
-        extracted_fields, field_confidences = nlp_extractor.extract_entities(raw_text)
+    if not extracted_fields or not extracted_fields.get("owner_name") or extracted_fields.get("owner_name") == "None":
+        extracted_fields, field_confidences = nlp_extractor.extract_entities(raw_text, user_hints=user_hints)
 
-    # Enrich extracted fields with user-provided location form metadata if missing
-    if district and not extracted_fields.get("district"):
-        extracted_fields["district"] = district
-    if taluk and not extracted_fields.get("taluk"):
-        extracted_fields["taluk"] = taluk
-    if hobli and not extracted_fields.get("hobli"):
-        extracted_fields["hobli"] = hobli
-    if village and not extracted_fields.get("village"):
-        extracted_fields["village"] = village
-    if survey_number and not extracted_fields.get("survey_number"):
-        extracted_fields["survey_number"] = survey_number
-    if surnoc and not extracted_fields.get("surnoc"):
-        extracted_fields["surnoc"] = surnoc
-    if hissa_number and not extracted_fields.get("hissa_number"):
-        extracted_fields["hissa_number"] = hissa_number
-    if record_year and not extracted_fields.get("record_year"):
-        extracted_fields["record_year"] = record_year
+    # Genuinely extracted document attributes take precedence over default untouched form inputs.
+    # Only fall back to form inputs if the attribute was not found from the document text.
+    for k, v in [
+        ("district", district),
+        ("taluk", taluk),
+        ("hobli", hobli),
+        ("village", village),
+        ("survey_number", survey_number),
+        ("surnoc", surnoc),
+        ("hissa_number", hissa_number),
+        ("record_year", record_year)
+    ]:
+        if v and not extracted_fields.get(k):
+            extracted_fields[k] = v
 
-    doc_type = nlp_extractor.classify_document(raw_text)
+    if owner_name and not extracted_fields.get("owner_name"):
+        extracted_fields["owner_name"] = owner_name
+
+    if area_value and not extracted_fields.get("area_value"):
+        try:
+            av = float(area_value)
+            extracted_fields["area_value"] = av
+            extracted_fields["area_unit"] = area_unit or "Acres"
+            extracted_fields["area_in_acres"] = nlp_extractor.normalize_area(av, area_unit or "Acres")
+        except (ValueError, TypeError):
+            pass
+
+    doc_type = nlp_extractor.classify_document(raw_text, user_hints=user_hints)
 
     # 3. Document upload record with complete BhoomiAI metadata
     doc_upload = DocumentUpload(
@@ -1728,7 +1846,7 @@ async def upload_document(
         processed_path=ocr_result["processed_path"],
         file_type=file_ext,
         file_size_bytes=file_size,
-        document_category=document_category,
+        document_category=doc_type or document_category,
         district=extracted_fields.get("district") or district,
         taluk=extracted_fields.get("taluk") or taluk,
         hobli=extracted_fields.get("hobli") or hobli,
@@ -1758,9 +1876,14 @@ async def upload_document(
     validation_issues = validation_service.validate_record(extracted_fields, field_confidences)
     record_status = validation_service.determine_record_status(validation_issues)
 
-    # Check GIS encroachment
+    # Check GIS encroachment (preventing false self-encroachments on same survey/village)
     existing_recs = db.query(LandRecord).all()
-    encroach = gis_service.check_encroachment(gis_poly["polygon"], existing_recs)
+    encroach = gis_service.check_encroachment(
+        candidate_poly=gis_poly["polygon"],
+        existing_records=existing_recs,
+        candidate_survey=extracted_fields.get("survey_number"),
+        candidate_village=extracted_fields.get("village")
+    )
     encroachment_flag = encroach["encroachment_detected"]
     if encroachment_flag:
         validation_issues.append({
@@ -1901,6 +2024,40 @@ async def upload_document(
         "warnings": json.loads(verif_res.warnings_json) if verif_res.warnings_json else []
     }
 
+    # Synchronize LandRecord lifecycle status with Verification Engine audit results
+    if verif_res.final_status == "MISMATCH_DETECTED":
+        land_record.status = "FLAGGED"
+        primary_doc.review_status = "FLAGGED"
+        doc_upload.review_status = "FLAGGED"
+        v_issue = {
+            "field_name": "verification_audit",
+            "issue_type": "STATUTORY_CROSS_VERIFICATION_MISMATCH",
+            "severity": "CRITICAL",
+            "description": f"Verification Engine detected discrepancies against official cadastral reference records ({verif_res.discrepancy_score}% discrepancy).",
+            "suggested_fix": "Review field comparisons in Verification Engine and initiate discrepancy resolution."
+        }
+        validation_issues.append(v_issue)
+        db.add(ValidationIssue(
+            record_id=land_record.id,
+            document_id=doc_upload.id,
+            field_name=v_issue["field_name"],
+            issue_type=v_issue["issue_type"],
+            severity=v_issue["severity"],
+            description=v_issue["description"],
+            suggested_fix=v_issue["suggested_fix"],
+            status="OPEN"
+        ))
+    elif verif_res.final_status == "NEEDS_REVIEW":
+        if land_record.status != "FLAGGED":
+            land_record.status = "PENDING_REVIEW"
+            primary_doc.review_status = "PENDING_REVIEW"
+            doc_upload.review_status = "PENDING_REVIEW"
+    elif verif_res.final_status == "MATCH":
+        if not encroachment_flag and record_status == "VALID":
+            land_record.status = "VALID"
+            primary_doc.review_status = "VERIFIED"
+            doc_upload.review_status = "VERIFIED"
+
     # Duplicate checks
     duplicates_detected = duplicate_detector.check_duplicate(extracted_fields, existing_recs)
     for dup in duplicates_detected:
@@ -1968,15 +2125,137 @@ async def upload_document(
     }
 
 
+@app.get("/api/documents/samples")
+def get_available_samples():
+    """Returns verified catalog of testable RTC and land records with metadata and download links."""
+    return [
+        {
+            "id": "mutation_extract",
+            "name": "Mutation Extract (Form 21) - Samplehalli (Sy 128 / A/2)",
+            "document_type": "Mutation Extract (Form 21 / MR)",
+            "survey_number": "128",
+            "hissa": "A/2",
+            "village": "Samplehalli",
+            "taluk": "Tumakuru",
+            "district": "Tumakuru",
+            "owner": "Meera N. (ಮೀರಾ ಎನ್)",
+            "relative": "Ravi Kumar (Transferor)",
+            "area": "1.50 Acres (1 Acre 20 Guntas)",
+            "mutation": "MR-DEMO-2026-0042",
+            "file_url": "/static/samples/sample_mutation_extract.jpeg",
+            "filename": "sample_mutation_extract.jpeg",
+            "status": "Authentic Mutation Register",
+            "expected_match": "MATCH (0.0% Discrepancy)"
+        },
+        {
+            "id": "tippan_sketch",
+            "name": "Tippan Survey Sketch (FMB) - Samplehalli (Sy 128 / A/2)",
+            "document_type": "Cadastral Survey Sketch (Tippan/FMB)",
+            "survey_number": "128",
+            "hissa": "A/2",
+            "village": "Samplehalli",
+            "taluk": "Tumakuru",
+            "district": "Tumakuru",
+            "owner": "Government Cadastral Parcel Sy No 128",
+            "area": "1.50 Acres (1 Acre 20 Guntas)",
+            "mutation": "MR-128/2024",
+            "file_url": "/static/samples/sample_tippan_sketch.jpeg",
+            "filename": "sample_tippan_sketch.jpeg",
+            "status": "Authentic Cadastral Boundary Sketch",
+            "expected_match": "MATCH (0.0% Discrepancy)"
+        },
+        {
+            "id": "user_pani_1",
+            "name": "Pahani 1 - Tumakuru, Devarayanahalli (Sy 142/3)",
+            "survey_number": "142/3",
+            "village": "Devarayanahalli",
+            "taluk": "Tumakuru",
+            "district": "Tumakuru",
+            "owner": "Shri Manjunath (ಶ್ರೀ ಮಂಜುನಾಥ್)",
+            "area": "0.68 Acres",
+            "mutation": "MR 32/2018-19",
+            "file_url": "/static/samples/Karnataka RTC Land Record Document-1.png",
+            "filename": "Karnataka RTC Land Record Document-1.png",
+            "status": "Authentic Official Record",
+            "expected_match": "MATCH (0.0% Discrepancy)"
+        },
+        {
+            "id": "user_pani_2",
+            "name": "Pahani 2 - Tumakuru, Belathur (Sy 112)",
+            "survey_number": "112",
+            "village": "Belathur",
+            "taluk": "Tumakuru",
+            "district": "Tumakuru",
+            "owner": "Shri Manjunath Gowda (ಶ್ರೀ ಮಂಜುನಾಥ ಗೌಡ)",
+            "area": "1.25 Acres",
+            "mutation": "MR 14/2021-22",
+            "file_url": "/static/samples/Karnataka RTC Land Record Document-2.png",
+            "filename": "Karnataka RTC Land Record Document-2.png",
+            "status": "Authentic Official Record",
+            "expected_match": "MATCH (0.0% Discrepancy)"
+        },
+        {
+            "id": "user_pani_3",
+            "name": "Pahani 3 - Tumakuru, Melekote (Sy 101)",
+            "survey_number": "101",
+            "village": "Melekote",
+            "taluk": "Tumakuru",
+            "district": "Tumakuru",
+            "owner": "Krishnappa M (ಕೃಷ್ಣಪ್ಪ ಎಂ)",
+            "area": "0.10 Acres (4 Guntas)",
+            "mutation": "MR 55/2023-24",
+            "file_url": "/static/samples/pani.jpeg",
+            "filename": "pani.jpeg",
+            "status": "Authentic Official Record",
+            "expected_match": "MATCH (0.0% Discrepancy)"
+        },
+        {
+            "id": "tumakuru_rtc",
+            "name": "Tumakuru Baseline RTC - Melekote (Sy 75)",
+            "survey_number": "75",
+            "village": "Melekote",
+            "taluk": "Tumakuru",
+            "district": "Tumakuru",
+            "owner": "Gangaraju K M (ಗಂಗರಾಜು)",
+            "area": "2.75 Acres",
+            "mutation": "MR-14/2023",
+            "file_url": "/static/samples/sample_tumakuru_rtc.png",
+            "filename": "sample_tumakuru_rtc.png",
+            "status": "Authentic Verified Baseline",
+            "expected_match": "MATCH (0.0% Discrepancy)"
+        },
+
+        {
+            "id": "tumakuru_mismatch",
+            "name": "Tumakuru Mismatch Demo - Sale Deed (Sy 75)",
+            "survey_number": "75",
+            "village": "Melekote",
+            "taluk": "Tumakuru",
+            "district": "Tumakuru",
+            "owner": "Gangaraju K M",
+            "area": "4.50 Acres (vs 2.75 Acres in RTC)",
+            "mutation": "REG-2024-991",
+            "file_url": "/static/samples/sample_tumakuru_mismatch.png",
+            "filename": "sample_tumakuru_mismatch.png",
+            "status": "Intentional Discrepancy Demo",
+            "expected_match": "MISMATCH_DETECTED (>10% Variance)"
+        }
+    ]
+
+
 @app.post("/api/documents/test-sample/{sample_name}", response_model=schemas.ExtractionResult)
 async def test_sample_document(sample_name: str, db: Session = Depends(get_db)):
     """Convenience endpoint to test preloaded synthetic documents including Karnataka RTCs."""
     sample_map = {
+        "user_pani_1": ("Karnataka RTC Land Record Document-1.png", "Revenue Department (RTC / ಪಹಣಿ)", "kn", "Tumakuru", "Tumakuru", "Kasaba", "Devarayanahalli", "142/3"),
+        "user_pani_2": ("Karnataka RTC Land Record Document-2.png", "Revenue Department (RTC / ಪಹಣಿ)", "kn", "Tumakuru", "Tumakuru", "Kasaba", "Belathur", "112"),
+        "user_pani_3": ("pani.jpeg", "Revenue Department (RTC / ಪಹಣಿ)", "kn", "Tumakuru", "Tumakuru", "Kasaba", "Melekote", "101"),
+        "mutation_extract": ("sample_mutation_extract.jpeg", "Revenue Department (Mutation Extract / Form 21)", "en", "Tumakuru", "Tumakuru", "Kasaba", "Samplehalli", "128"),
+        "tippan_sketch": ("sample_tippan_sketch.jpeg", "Survey & Settlement Department (Tippan / FMB)", "en", "Tumakuru", "Tumakuru", "Kasaba", "Samplehalli", "128"),
         "tumakuru_rtc": ("sample_tumakuru_rtc.png", "Revenue Department (RTC / ಪಹಣಿ)", "kn", "Tumakuru", "Tumakuru", "Kasaba", "Melekote", "75"),
         "tumakuru_mismatch": ("sample_tumakuru_mismatch.png", "Sub-Registrar Office (Sale Deed)", "en", "Tumakuru", "Tumakuru", "Kasaba", "Melekote", "75"),
         "tumakuru_english_rtc": ("sample_tumakuru_rtc.png", "Revenue Department (RTC)", "en", "Tumakuru", "Tumakuru", "Kasaba", "Melekote", "75"),
         "davanagere_rtc": ("sample_davanagere_rtc.png", "Revenue Department (RTC / ಪಹಣಿ)", "kn", "Davanagere", "Davanagere", "Kasaba", "Avaragere", "104"),
-        "maravanji_rtc": ("sample_maravanji_rtc.png", "Revenue Department (RTC / ಪಹಣಿ)", "kn", "Davanagere", "Channagiri", "Kasaba", "Maravanji", "42"),
         "davanagere_mismatch": ("sample_davanagere_mismatch.png", "Sub-Registrar Office (Sale Deed)", "en", "Davanagere", "Davanagere", "Kasaba", "Avaragere", "104"),
         "rtc_karnataka": ("sample_rtc_karnataka.png", "Revenue Department (RTC)", "en", "Bengaluru Rural", "Devanahalli", "Kasaba", "Vijayapura", "142/2"),
         "sale_deed_mismatch": ("sample_sale_deed_mismatch.png", "Sub-Registrar Office (Sale Deed)", "en", "Bengaluru Rural", "Devanahalli", "Kasaba", "Vijayapura", "142/2"),
@@ -2290,6 +2569,200 @@ def download_project_report():
         media_type="application/pdf",
         filename="SIH26018_BhoomiVerify_Full_Project_Report.pdf"
     )
+
+
+# ==========================================
+# 💬 BhoomiAI Assistant Chat Endpoints
+# ==========================================
+
+_chat_rate_limits = {}
+
+def get_chat_client_id(request: Request) -> str:
+    user_header = request.headers.get("X-User-Id")
+    if user_header:
+        return user_header.strip()
+    return request.client.host if request.client else "guest-user"
+
+def check_chat_rate_limit(client_id: str):
+    now = time.time()
+    timestamps = _chat_rate_limits.get(client_id, [])
+    timestamps = [t for t in timestamps if now - t < 60]
+    if len(timestamps) >= CHAT_RATE_LIMIT_PER_MINUTE:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Rate limit exceeded. Please wait a moment before sending more messages (max {CHAT_RATE_LIMIT_PER_MINUTE} per minute)."
+        )
+    timestamps.append(now)
+    _chat_rate_limits[client_id] = timestamps
+
+
+@app.get("/api/chat/status", response_model=schemas.ChatStatusResponse)
+def get_chat_status():
+    """Returns AI service status and configuration state."""
+    is_configured = AIChatService.is_api_key_configured()
+    provider, model_name = AIChatService.get_provider_and_model()
+    return schemas.ChatStatusResponse(
+        api_key_configured=is_configured,
+        model=model_name,
+        service_status="ONLINE" if is_configured else "SETUP_REQUIRED",
+        message=(
+            f"Live AI intelligence active and connected ({provider.upper()} - {model_name})."
+            if is_configured
+            else "Assistant ready in setup mode. Add your API key to backend/.env to unlock real-time completions."
+        )
+    )
+
+
+@app.post("/api/chat")
+async def chat_message_stream(
+    chat_req: schemas.ChatRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """
+    Main ChatGPT-like streaming chat endpoint.
+    Accepts user prompt, maintains multi-turn conversation memory, and streams real-time SSE chunks.
+    """
+    client_id = get_chat_client_id(request)
+    check_chat_rate_limit(client_id)
+
+    raw_message = (chat_req.message or "").strip()
+    if not raw_message:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    if len(raw_message) > CHAT_MAX_MESSAGE_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Message exceeds maximum character length of {CHAT_MAX_MESSAGE_LENGTH}")
+
+    return StreamingResponse(
+        AIChatService.stream_chat_response(
+            db=db,
+            conversation_id=chat_req.conversation_id,
+            user_message=raw_message,
+            selected_parcel_context=chat_req.selected_parcel_context,
+            current_map_view=chat_req.current_map_view,
+            user_id=client_id
+        ),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+@app.get("/api/chat/conversations", response_model=List[schemas.ChatConversationSummary])
+def get_chat_conversations(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Lists all conversation sessions for the active user/session."""
+    client_id = get_chat_client_id(request)
+    convs = db.query(ChatConversation).filter(
+        ChatConversation.user_id == client_id
+    ).order_by(ChatConversation.updated_at.desc()).all()
+
+    result = []
+    for c in convs:
+        last_msg = db.query(ChatMessage).filter(
+            ChatMessage.conversation_id == c.id
+        ).order_by(ChatMessage.id.desc()).first()
+        msg_count = db.query(func.count(ChatMessage.id)).filter(
+            ChatMessage.conversation_id == c.id
+        ).scalar() or 0
+
+        result.append(schemas.ChatConversationSummary(
+            id=c.id,
+            title=c.title or "New Conversation",
+            created_at=c.created_at,
+            updated_at=c.updated_at,
+            message_count=msg_count,
+            last_message_preview=last_msg.content[:80] + "..." if last_msg and len(last_msg.content) > 80 else (last_msg.content if last_msg else None)
+        ))
+    return result
+
+
+@app.get("/api/chat/conversations/{conversation_id}", response_model=schemas.ChatConversationDetail)
+def get_chat_conversation_detail(
+    conversation_id: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Retrieves full conversation turns and history for a given conversation ID."""
+    client_id = get_chat_client_id(request)
+    conv = db.query(ChatConversation).filter(
+        ChatConversation.id == conversation_id,
+        ChatConversation.user_id == client_id
+    ).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    messages = db.query(ChatMessage).filter(
+        ChatMessage.conversation_id == conversation_id
+    ).order_by(ChatMessage.id.asc()).all()
+
+    msg_schemas = []
+    for m in messages:
+        map_act = None
+        if m.map_action:
+            try:
+                map_act = json.loads(m.map_action)
+            except Exception:
+                pass
+        msg_schemas.append(schemas.ChatMessageSchema(
+            id=m.id,
+            role=m.role,
+            content=m.content,
+            map_action=map_act,
+            created_at=m.created_at
+        ))
+
+    return schemas.ChatConversationDetail(
+        id=conv.id,
+        title=conv.title or "New Conversation",
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
+        messages=msg_schemas
+    )
+
+
+@app.delete("/api/chat/conversations/{conversation_id}")
+def delete_chat_conversation(
+    conversation_id: str,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Deletes a conversation session and all its message turns."""
+    client_id = get_chat_client_id(request)
+    conv = db.query(ChatConversation).filter(
+        ChatConversation.id == conversation_id,
+        ChatConversation.user_id == client_id
+    ).first()
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    db.query(ChatMessage).filter(ChatMessage.conversation_id == conversation_id).delete()
+    db.delete(conv)
+    db.commit()
+    return {"message": "Conversation successfully deleted", "id": conversation_id}
+
+
+@app.post("/api/chat/conversations/clear")
+def clear_all_chat_conversations(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Clears all conversation sessions for the active user/session."""
+    client_id = get_chat_client_id(request)
+    user_convs = db.query(ChatConversation).filter(ChatConversation.user_id == client_id).all()
+    conv_ids = [c.id for c in user_convs]
+
+    if conv_ids:
+        db.query(ChatMessage).filter(ChatMessage.conversation_id.in_(conv_ids)).delete(synchronize_session=False)
+        db.query(ChatConversation).filter(ChatConversation.user_id == client_id).delete(synchronize_session=False)
+        db.commit()
+
+    return {"message": "All conversations cleared", "cleared_count": len(conv_ids)}
+
 
 
 # Mount built frontend dist for unified production server

@@ -417,3 +417,47 @@ class LandRecordDocument(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     record = relationship("LandRecord", back_populates="documents")
+
+
+# ==========================================
+# 💬 BhoomiAI Intelligent Assistant Chat Models
+# ==========================================
+
+class ChatConversation(Base):
+    """
+    ChatGPT-style conversation session with conversational title, user isolation,
+    and automatic timestamp tracking.
+    """
+    __tablename__ = "chat_conversations"
+
+    id = Column(String(50), primary_key=True, index=True)  # UUID4
+    user_id = Column(String(100), default="guest-user", index=True)
+    title = Column(String(255), default="New Conversation")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    messages = relationship(
+        "ChatMessage", 
+        back_populates="conversation", 
+        cascade="all, delete-orphan", 
+        order_by="ChatMessage.id"
+    )
+
+
+class ChatMessage(Base):
+    """
+    Individual chat turn (User or Assistant) with markdown text content,
+    optional structured map action triggers, and token usage tracking.
+    """
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(String(50), ForeignKey("chat_conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(20), nullable=False)  # 'user', 'assistant', 'system'
+    content = Column(Text, nullable=False)
+    map_action = Column(Text, nullable=True)   # Serialized JSON map action payload
+    tokens_used = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    conversation = relationship("ChatConversation", back_populates="messages")
+

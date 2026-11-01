@@ -9,6 +9,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Maps JavaScript API MapTypeId definitions & async script -->
+    <script>
+      window.google = window.google || {};
+      window.google.maps = window.google.maps || {};
+      window.google.maps.MapTypeId = window.google.maps.MapTypeId || {
+        ROADMAP: 'roadmap',
+        SATELLITE: 'satellite',
+        HYBRID: 'hybrid',
+        TERRAIN: 'terrain'
+      };
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?loading=async" async defer></script>
   </head>
   <body class="bg-slate-950 text-slate-100 font-['Plus_Jakarta_Sans',sans-serif] antialiased selection:bg-emerald-500 selection:text-white min-h-screen">
     <div id="root"></div>

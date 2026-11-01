@@ -75,4 +75,11 @@ export const verifyBlockchain = () => api.post('/blockchain/verify');
 export const submitFieldInspection = (data) => api.post('/inspections/submit', data);
 export const getInspectionLogs = (recordId) => api.get(`/inspections/record/${recordId}`);
 
+// 💬 BhoomiAI Intelligent Assistant (ChatGPT-like AI Chatbot)
+export const getChatStatus = () => api.get('/chat/status');
+export const getChatConversations = () => api.get('/chat/conversations');
+export const getChatConversationDetail = (id) => api.get(`/chat/conversations/${id}`);
+export const deleteChatConversation = (id) => api.delete(`/chat/conversations/${id}`);
+export const clearAllChatConversations = () => api.post('/chat/conversations/clear');
+
 export default api;

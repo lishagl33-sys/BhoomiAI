@@ -1045,7 +1045,7 @@ export default function AgriTerrain3D({ onSwitchTo2D, onSelectParcelForInspectio
                         ₹{rec.totalPayment.toLocaleString('en-IN')}
                       </div>
                       <div className="text-[10px] font-mono text-slate-500">
-                        ⛓️ {rec.blockchainTx}
+                        Ref: {rec.receiptId}
                       </div>
                     </div>
                   </div>

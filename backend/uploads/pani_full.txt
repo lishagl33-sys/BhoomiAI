@@ -1,0 +1,14 @@
+Here's the extracted text from the Karnataka RTC Pahani document, accurately transcribed:
+
+**Top Section:**
+C0100F6E4B
+Valid From 01/07/2011 13:11:00 To Till Date
+Print Page No: 1/1
+
+**Left Table - Survey Number and Area Details:**
+
+| ಕ್ರ.ಸಂ | ಸ.ನಂ | ಖರಾಬು | ಒಟ್ಟು ವಿಸ್ತೀರ್ಣ |
+|---|---|---|---|
+| 1 | 101 | 0.00.00 | 0.04.00 |
+| | | 0.00.00 | 0.00.00 |
+| |

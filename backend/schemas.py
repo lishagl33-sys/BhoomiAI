@@ -117,6 +117,11 @@ class VerificationResultResponse(BaseModel):
     reference_source_details: Optional[str] = None
     verified_at: datetime
     reference_parcel: Optional[ReferenceParcelResponse] = None
+    document_filename: Optional[str] = None
+    document_category: Optional[str] = None
+    extracted_fields: Optional[Dict[str, Any]] = None
+    blockchain_hash: Optional[str] = None
+    raw_ocr_text: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
@@ -484,4 +489,51 @@ class PolygonIdentifyResponse(BaseModel):
     candidate_count: Optional[int] = 0
     drawn_polygon_area_acres: Optional[float] = 0.0
     disclaimer: str = "Arbitrary polygon selection does not establish legal boundaries or title. Independent verification against physical revenue registers is required."
+
+
+# ==========================================
+# 💬 BhoomiAI Assistant Chat Schemas
+# ==========================================
+
+class ChatMessageSchema(BaseModel):
+    id: int
+    role: str
+    content: str
+    map_action: Optional[Dict[str, Any]] = None
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChatConversationSummary(BaseModel):
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int = 0
+    last_message_preview: Optional[str] = None
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChatConversationDetail(BaseModel):
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages: List[ChatMessageSchema] = []
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ChatRequest(BaseModel):
+    conversation_id: Optional[str] = None
+    message: str
+    selected_parcel_context: Optional[Dict[str, Any]] = None
+    current_map_view: Optional[Dict[str, Any]] = None
+
+
+class ChatStatusResponse(BaseModel):
+    api_key_configured: bool
+    model: str
+    service_status: str
+    message: str
+
 

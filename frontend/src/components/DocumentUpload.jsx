@@ -16,7 +16,9 @@ import {
   Globe2,
   Lock,
   Layers,
-  Check
+  Check,
+  Download,
+  Zap
 } from 'lucide-react';
 import { uploadDocument, runSampleExtraction, getDistricts, getTaluks, getHoblis, getVillages } from '../api';
 
@@ -38,12 +40,15 @@ export default function DocumentUpload({ onExtractionComplete, theme = 'dark' })
   const [selectedHobli, setSelectedHobli] = useState('Kasaba');
   const [selectedVillage, setSelectedVillage] = useState('Melekote');
 
-  // Parcel Identifiers
-  const [surveyNumber, setSurveyNumber] = useState('75');
-  const [surnoc, setSurnoc] = useState('1');
-  const [hissaNumber, setHissaNumber] = useState('2A');
+  // Parcel Identifiers (Optional hints - OCR auto-extracts from document scan)
+  const [surveyNumber, setSurveyNumber] = useState('');
+  const [surnoc, setSurnoc] = useState('');
+  const [hissaNumber, setHissaNumber] = useState('');
   const [recordYear, setRecordYear] = useState('2024-2025');
   const [recordType, setRecordType] = useState('CURRENT_RTC');
+  const [declaredOwner, setDeclaredOwner] = useState('');
+  const [declaredArea, setDeclaredArea] = useState('');
+  const [declaredUnit, setDeclaredUnit] = useState('Acres');
 
   const [dragOver, setDragOver] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -131,7 +136,7 @@ export default function DocumentUpload({ onExtractionComplete, theme = 'dark' })
     { title: "Optical Character Recognition (OCR)", detail: `Executing Indic-OCR for ${selectedLanguage.toUpperCase()} with coordinate boundary mapping...` },
     { title: "Entity Extraction & Parsing", detail: "Extracting Survey/Hissa, Titleholder, Area (Acres/Guntas), Mutation Number & East/West/North/South boundaries..." },
     { title: "Authoritative Reference Comparison", detail: "Running side-by-side matching against official Karnataka ReferenceParcel dataset..." },
-    { title: "Cadastral GIS Geofencing & Blockchain Anchoring", detail: "Generating cryptographic SHA-256 mutation block and verifying GIS boundary stones..." }
+    { title: "Cadastral GIS Geofencing & Boundary Verification", detail: "Correlating parcel polygons and verifying GIS boundary stones against official maps..." }
   ];
 
   const validateFile = (file) => {
@@ -187,11 +192,14 @@ export default function DocumentUpload({ onExtractionComplete, theme = 'dark' })
     formData.append('taluk', selectedTaluk);
     formData.append('hobli', selectedHobli);
     formData.append('village', selectedVillage);
-    formData.append('survey_number', surveyNumber);
-    formData.append('surnoc', surnoc);
-    formData.append('hissa_number', hissaNumber);
+    if (surveyNumber) formData.append('survey_number', surveyNumber);
+    if (surnoc) formData.append('surnoc', surnoc);
+    if (hissaNumber) formData.append('hissa_number', hissaNumber);
     formData.append('record_year', recordYear);
     formData.append('record_type', recordType);
+    if (declaredOwner) formData.append('owner_name', declaredOwner);
+    if (declaredArea) formData.append('area_value', declaredArea);
+    if (declaredUnit) formData.append('area_unit', declaredUnit);
 
     supportingFiles.forEach((f) => {
       formData.append('supporting_documents', f);
@@ -408,7 +416,7 @@ export default function DocumentUpload({ onExtractionComplete, theme = 'dark' })
                 type="text"
                 value={surveyNumber}
                 onChange={(e) => setSurveyNumber(e.target.value)}
-                placeholder="e.g. 75"
+                placeholder="Auto-detected from OCR (or e.g. 128)"
                 className={`w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border-2 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 ${
                   isLight 
                     ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 shadow-xs' 
@@ -438,7 +446,7 @@ export default function DocumentUpload({ onExtractionComplete, theme = 'dark' })
                 type="text"
                 value={hissaNumber}
                 onChange={(e) => setHissaNumber(e.target.value)}
-                placeholder="1"
+                placeholder="Auto (or e.g. A/2)"
                 className={`w-full px-3.5 py-2.5 text-xs font-bold rounded-xl border-2 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/30 ${
                   isLight 
                     ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 shadow-xs' 
@@ -480,6 +488,67 @@ export default function DocumentUpload({ onExtractionComplete, theme = 'dark' })
                 <option value="CURRENT_RTC" className={isLight ? 'bg-white text-slate-900 font-medium' : 'bg-slate-900 text-white font-medium'}>Current Year RTC</option>
                 <option value="HISTORICAL_RTC" className={isLight ? 'bg-white text-slate-900 font-medium' : 'bg-slate-900 text-white font-medium'}>Historical RTC</option>
               </select>
+            </div>
+          </div>
+
+          {/* Optional Titleholder & Extent Verification Hints */}
+          <div className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3 border-t ${
+            isLight ? 'border-slate-200' : 'border-slate-800'
+          }`}>
+            <div>
+              <label className={`text-xs font-bold block mb-1 ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
+                Titleholder / Khatadar Name <span className="text-[10px] text-emerald-600 font-normal">(Optional - auto-extracted if empty)</span>
+              </label>
+              <input
+                type="text"
+                value={declaredOwner}
+                onChange={(e) => setDeclaredOwner(e.target.value)}
+                placeholder="e.g. Gangaraju K M / ಬಸವರಾಜಪ್ಪ"
+                className={`w-full px-3.5 py-2 text-xs font-semibold rounded-xl border focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 ${
+                  isLight 
+                    ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400' 
+                    : 'border-slate-700 bg-slate-950 text-white placeholder-slate-500'
+                }`}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className={`text-xs font-bold block mb-1 ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
+                  Declared Extent <span className="text-[10px] text-emerald-600 font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={declaredArea}
+                  onChange={(e) => setDeclaredArea(e.target.value)}
+                  placeholder="e.g. 2.75"
+                  className={`w-full px-3.5 py-2 text-xs font-semibold rounded-xl border focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/30 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400' 
+                      : 'border-slate-700 bg-slate-950 text-white placeholder-slate-500'
+                  }`}
+                />
+              </div>
+              <div className="w-24">
+                <label className={`text-xs font-bold block mb-1 ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
+                  Unit
+                </label>
+                <select
+                  value={declaredUnit}
+                  onChange={(e) => setDeclaredUnit(e.target.value)}
+                  className={`w-full px-2 py-2 text-xs font-semibold rounded-xl border focus:outline-none focus:border-emerald-400 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-900' 
+                      : 'border-slate-700 bg-slate-900 text-white'
+                  }`}
+                >
+                  <option value="Acres">Acres</option>
+                  <option value="Guntas">Guntas</option>
+                  <option value="Cents">Cents</option>
+                  <option value="Hectares">Hectares</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -689,102 +758,356 @@ export default function DocumentUpload({ onExtractionComplete, theme = 'dark' })
           </div>
         )}
 
-        {/* Section 6: Instant Demo Synthetic Documents */}
-        <div className={`pt-3 border-t-2 space-y-3 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
-          <div className="flex items-center justify-between">
-            <span className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-1.5 ${
-              isLight ? 'text-emerald-800' : 'text-emerald-300'
+        {/* Section 6: Instant Demo & Real User RTC Records */}
+        <div className={`pt-4 border-t-2 space-y-4 ${isLight ? 'border-slate-200' : 'border-slate-800'}`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <span className={`text-sm font-extrabold uppercase tracking-wider flex items-center gap-1.5 ${
+                isLight ? 'text-emerald-800' : 'text-emerald-300'
+              }`}>
+                <Zap className={`w-4 h-4 ${isLight ? 'text-amber-500' : 'text-amber-400'}`} />
+                Ready-to-Test RTC Records &amp; Panis:
+              </span>
+              <p className={`text-xs mt-0.5 ${isLight ? 'text-slate-600' : 'text-slate-400'}`}>
+                Don't have a document to upload? Use these pre-verified Karnataka RTC records or download them to test manual upload.
+              </p>
+            </div>
+            <span className={`text-xs font-bold px-3 py-1 rounded-full border self-start sm:self-auto ${
+              isLight ? 'text-emerald-800 bg-emerald-50 border-emerald-200' : 'text-emerald-300 bg-emerald-500/20 border-emerald-500/40'
             }`}>
-              <FileCheck2 className={`w-4 h-4 ${isLight ? 'text-emerald-600' : 'text-emerald-400'}`} />
-              Quick Pilot Test Documents (Tumakuru Baseline):
-            </span>
-            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-md border ${
-              isLight ? 'text-slate-700 bg-slate-100 border-slate-200' : 'text-slate-200 bg-slate-900 border-slate-700'
-            }`}>
-              Tagged [SYNTHETIC / DEMO DATA]
+              1-Click Verification Ready
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-            <button
-              type="button"
-              onClick={() => runSample("tumakuru_rtc", "kn")}
-              className={`p-4 rounded-2xl border-2 text-left transition group shadow-xs hover:shadow-md ${
-                isLight 
-                  ? 'border-slate-200 bg-white hover:border-emerald-500' 
-                  : 'border-slate-700 bg-slate-900/90 hover:bg-slate-900 hover:border-emerald-400'
-              }`}
-            >
-              <div className={`font-extrabold text-xs flex items-center justify-between ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                <span>Tumakuru RTC (Kannada)</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
-                  isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40'
-                }`}>Match</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Record 1: User's Pahani 1 */}
+            <div className={`p-4 rounded-2xl border-2 transition group flex flex-col justify-between shadow-xs ${
+              isLight ? 'border-emerald-300 bg-emerald-50/40 hover:shadow-md' : 'border-emerald-500/40 bg-slate-900/90 hover:border-emerald-400'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`font-extrabold text-xs ${isLight ? 'text-emerald-950' : 'text-white'}`}>
+                    Pahani 1: Devarayanahalli (Sy 142/3)
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                    isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40'
+                  }`}>0% Discrepancy</span>
+                </div>
+                <div className={`text-xs mt-2 space-y-0.5 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <p><strong className="font-semibold">Owner:</strong> Shri Manjunath (ಶ್ರೀ ಮಂಜುನಾಥ್)</p>
+                  <p><strong className="font-semibold">Location:</strong> Devarayanahalli, Tumakuru</p>
+                  <p><strong className="font-semibold">Extent:</strong> 0.68 Acres (Dry Crop)</p>
+                  <p><strong className="font-semibold">Mutation:</strong> MR 32/2018-19</p>
+                </div>
               </div>
-              <p className={`text-xs mt-1.5 font-medium leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
-                Survey 75/2A, Melekote (Kasaba). Gangaraju K M (ಗಂಗರಾಜು). Exact match with reference.
-              </p>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => runSample("tumakuru_english_rtc", "en")}
-              className={`p-4 rounded-2xl border-2 text-left transition group shadow-xs hover:shadow-md ${
-                isLight 
-                  ? 'border-slate-200 bg-white hover:border-emerald-500' 
-                  : 'border-slate-700 bg-slate-900/90 hover:bg-slate-900 hover:border-emerald-400'
-              }`}
-            >
-              <div className={`font-extrabold text-xs flex items-center justify-between ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                <span>Tumakuru RTC (English)</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
-                  isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40'
-                }`}>Match</span>
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runSample("user_pani_1", "kn")}
+                  className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>1-Click Test</span>
+                </button>
+                <a
+                  href="/static/samples/Karnataka RTC Land Record Document-1.png"
+                  download="Karnataka_RTC_Document_1.png"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  }`}
+                  title="Download RTC Document Image to test manual upload"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
               </div>
-              <p className={`text-xs mt-1.5 font-medium leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
-                Survey 75, Melekote. Clear Title verified against Tumakuru Land Records.
-              </p>
-            </button>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => runSample("tumakuru_mismatch", "en")}
-              className={`p-4 rounded-2xl border-2 text-left transition group shadow-xs hover:shadow-md ${
-                isLight 
-                  ? 'border-slate-200 bg-white hover:border-amber-500' 
-                  : 'border-slate-700 bg-slate-900/90 hover:bg-slate-900 hover:border-amber-400'
-              }`}
-            >
-              <div className={`font-extrabold text-xs flex items-center justify-between ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                <span>Tumakuru Deed (Mismatch)</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
-                  isLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/25 text-amber-200 border-amber-500/40'
-                }`}>Mismatch</span>
+            {/* Record 2: User's Pahani 2 */}
+            <div className={`p-4 rounded-2xl border-2 transition group flex flex-col justify-between shadow-xs ${
+              isLight ? 'border-emerald-300 bg-emerald-50/40 hover:shadow-md' : 'border-emerald-500/40 bg-slate-900/90 hover:border-emerald-400'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`font-extrabold text-xs ${isLight ? 'text-emerald-950' : 'text-white'}`}>
+                    Pahani 2: Belathur (Sy 112)
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                    isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40'
+                  }`}>0% Discrepancy</span>
+                </div>
+                <div className={`text-xs mt-2 space-y-0.5 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <p><strong className="font-semibold">Owner:</strong> Shri Manjunath Gowda (ಶ್ರೀ ಮಂಜುನಾಥ ಗೌಡ)</p>
+                  <p><strong className="font-semibold">Location:</strong> Belathur, Tumakuru</p>
+                  <p><strong className="font-semibold">Extent:</strong> 1.25 Acres (Dry Crop)</p>
+                  <p><strong className="font-semibold">Mutation:</strong> MR 14/2021-22</p>
+                </div>
               </div>
-              <p className={`text-xs mt-1.5 font-medium leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
-                Survey 75/2A, Melekote. Extent 3.80 vs 2.75 Acres. Area discrepancy detected.
-              </p>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => runSample("kannada_rtc", "kn")}
-              className={`p-4 rounded-2xl border-2 text-left transition group shadow-xs hover:shadow-md ${
-                isLight 
-                  ? 'border-slate-200 bg-white hover:border-emerald-500' 
-                  : 'border-slate-700 bg-slate-900/90 hover:bg-slate-900 hover:border-emerald-400'
-              }`}
-            >
-              <div className={`font-extrabold text-xs flex items-center justify-between ${isLight ? 'text-slate-900' : 'text-white'}`}>
-                <span>Tumakuru Title (Kannada)</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
-                  isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40'
-                }`}>Verified</span>
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runSample("user_pani_2", "kn")}
+                  className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>1-Click Test</span>
+                </button>
+                <a
+                  href="/static/samples/Karnataka RTC Land Record Document-2.png"
+                  download="Karnataka_RTC_Document_2.png"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  }`}
+                  title="Download RTC Document Image to test manual upload"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
               </div>
-              <p className={`text-xs mt-1.5 font-medium leading-relaxed ${isLight ? 'text-slate-600' : 'text-slate-200'}`}>
-                Survey 75, Melekote. Native Kannada script OCR and titleholder verification.
-              </p>
-            </button>
+            </div>
+
+            {/* Record 3: User's Pahani 3 */}
+            <div className={`p-4 rounded-2xl border-2 transition group flex flex-col justify-between shadow-xs ${
+              isLight ? 'border-emerald-300 bg-emerald-50/40 hover:shadow-md' : 'border-emerald-500/40 bg-slate-900/90 hover:border-emerald-400'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`font-extrabold text-xs ${isLight ? 'text-emerald-950' : 'text-white'}`}>
+                    Pahani 3: Melekote (Sy 101)
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                    isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40'
+                  }`}>0% Discrepancy</span>
+                </div>
+                <div className={`text-xs mt-2 space-y-0.5 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <p><strong className="font-semibold">Owner:</strong> Krishnappa M (ಕೃಷ್ಣಪ್ಪ ಎಂ)</p>
+                  <p><strong className="font-semibold">Location:</strong> Melekote, Tumakuru</p>
+                  <p><strong className="font-semibold">Extent:</strong> 0.10 Acres (4 Guntas)</p>
+                  <p><strong className="font-semibold">Mutation:</strong> MR 55/2023-24</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runSample("user_pani_3", "kn")}
+                  className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>1-Click Test</span>
+                </button>
+                <a
+                  href="/static/samples/pani.jpeg"
+                  download="pani_melekote_101.jpeg"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  }`}
+                  title="Download RTC Document Image to test manual upload"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Record 4: Tumakuru Standard RTC Sy 75 */}
+            <div className={`p-4 rounded-2xl border-2 transition group flex flex-col justify-between shadow-xs ${
+              isLight ? 'border-slate-200 bg-white hover:border-emerald-500 hover:shadow-md' : 'border-slate-700 bg-slate-900/90 hover:border-emerald-400'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`font-extrabold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}>
+                    Tumakuru RTC: Melekote (Sy 75)
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                    isLight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/25 text-emerald-200 border-emerald-500/40'
+                  }`}>Baseline</span>
+                </div>
+                <div className={`text-xs mt-2 space-y-0.5 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <p><strong className="font-semibold">Owner:</strong> Gangaraju K M (ಗಂಗರಾಜು)</p>
+                  <p><strong className="font-semibold">Location:</strong> Melekote, Tumakuru</p>
+                  <p><strong className="font-semibold">Extent:</strong> 2.75 Acres (Garden / Coconut)</p>
+                  <p><strong className="font-semibold">Mutation:</strong> MR-14/2023</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runSample("tumakuru_rtc", "kn")}
+                  className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>1-Click Test</span>
+                </button>
+                <a
+                  href="/static/samples/sample_tumakuru_rtc.png"
+                  download="sample_tumakuru_rtc.png"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  }`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+              </div>
+            </div>
+
+
+                        {/* Record 5: Official Mutation Extract (Form 21) */}
+            <div className={`p-4 rounded-2xl border-2 transition group flex flex-col justify-between shadow-xs ${
+              isLight ? 'border-teal-300 bg-teal-50/40 hover:shadow-md' : 'border-teal-500/40 bg-slate-900/90 hover:border-teal-400'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`font-extrabold text-xs ${isLight ? 'text-teal-950' : 'text-white'}`}>
+                    Mutation Extract: Samplehalli (Sy 128)
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                    isLight ? 'bg-teal-100 text-teal-800 border-teal-300' : 'bg-teal-500/25 text-teal-200 border-teal-500/40'
+                  }`}>Form 21 / MR</span>
+                </div>
+                <div className={`text-xs mt-2 space-y-0.5 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <p><strong className="font-semibold">Transferee:</strong> Meera N. (ಮೀರಾ ಎನ್)</p>
+                  <p><strong className="font-semibold">Transferor:</strong> Ravi Kumar</p>
+                  <p><strong className="font-semibold">Extent:</strong> 1 Acre 20 Guntas (1.50 Ac)</p>
+                  <p><strong className="font-semibold">Mutation No:</strong> MR-DEMO-2026-0042</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runSample("mutation_extract", "en")}
+                  className="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>1-Click Test</span>
+                </button>
+                <a
+                  href="/static/samples/sample_mutation_extract.jpeg"
+                  download="sample_mutation_extract.jpeg"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  }`}
+                  title="Download Mutation Extract to test manual upload"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Record 6: Cadastral Survey Sketch (Tippan / FMB) */}
+            <div className={`p-4 rounded-2xl border-2 transition group flex flex-col justify-between shadow-xs ${
+              isLight ? 'border-indigo-300 bg-indigo-50/40 hover:shadow-md' : 'border-indigo-500/40 bg-slate-900/90 hover:border-indigo-400'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`font-extrabold text-xs ${isLight ? 'text-indigo-950' : 'text-white'}`}>
+                    Tippan Sketch: Samplehalli (Sy 128)
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                    isLight ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-indigo-500/25 text-indigo-200 border-indigo-500/40'
+                  }`}>FMB Cadastral</span>
+                </div>
+                <div className={`text-xs mt-2 space-y-0.5 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <p><strong className="font-semibold">Survey No:</strong> 128 / A/2 (Samplehalli)</p>
+                  <p><strong className="font-semibold">Boundary Extent:</strong> 1 Acre 20 Guntas</p>
+                  <p><strong className="font-semibold">Adjoining N/S:</strong> Sy 127 &amp; Sy 129</p>
+                  <p><strong className="font-semibold">Adjoining E/W:</strong> Sy 130 &amp; Sy 128/1</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runSample("tippan_sketch", "en")}
+                  className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>1-Click Test</span>
+                </button>
+                <a
+                  href="/static/samples/sample_tippan_sketch.jpeg"
+                  download="sample_tippan_sketch.jpeg"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  }`}
+                  title="Download Tippan Sketch to test manual upload"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Record 6: Mismatch Demo */}
+            <div className={`p-4 rounded-2xl border-2 transition group flex flex-col justify-between shadow-xs ${
+              isLight ? 'border-amber-300 bg-amber-50/40 hover:shadow-md' : 'border-amber-500/40 bg-slate-900/90 hover:border-amber-400'
+            }`}>
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className={`font-extrabold text-xs ${isLight ? 'text-amber-950' : 'text-white'}`}>
+                    Discrepancy Demo: Sale Deed
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold border ${
+                    isLight ? 'bg-amber-100 text-amber-800 border-amber-300' : 'bg-amber-500/25 text-amber-200 border-amber-500/40'
+                  }`}>Mismatch</span>
+                </div>
+                <div className={`text-xs mt-2 space-y-0.5 font-medium ${isLight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <p><strong className="font-semibold">Owner:</strong> Gangaraju K M</p>
+                  <p><strong className="font-semibold">Location:</strong> Melekote, Tumakuru (Sy 75)</p>
+                  <p><strong className="font-semibold">Deed Extent:</strong> 4.50 Acres (vs 2.75 Acres in RTC)</p>
+                  <p><strong className="font-semibold">Issue:</strong> Over-reporting variance</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-4 pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => runSample("tumakuru_mismatch", "en")}
+                  className="flex-1 py-2 px-3 bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>1-Click Test</span>
+                </button>
+                <a
+                  href="/static/samples/sample_tumakuru_mismatch.png"
+                  download="sample_tumakuru_mismatch.png"
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-1 shrink-0 ${
+                    isLight 
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' 
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                  }`}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
+                </a>
+              </div>
+            </div>
+
           </div>
         </div>
 

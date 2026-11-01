@@ -68,7 +68,7 @@ import {
   searchPlaces,
   getCoverageMetadata,
   getOsmBuildings,
-  importGeojsonBoundary,
+
   createLandParcel,
   updateLandParcel,
   deleteLandParcel
@@ -121,39 +121,53 @@ const KARNATAKA_PILOT_COORDS = {
   gubbi: { lat: 13.3120, lng: 76.9380, zoom: 14 }
 };
 
+// Official Google Maps JavaScript API MapTypeId Definition
+export const GoogleMapTypeId = (typeof window !== 'undefined' && window.google?.maps?.MapTypeId) ? window.google.maps.MapTypeId : {
+  ROADMAP: 'roadmap',
+  SATELLITE: 'satellite',
+  HYBRID: 'hybrid',
+  TERRAIN: 'terrain'
+};
+
+if (typeof window !== 'undefined') {
+  window.google = window.google || {};
+  window.google.maps = window.google.maps || {};
+  window.google.maps.MapTypeId = window.google.maps.MapTypeId || GoogleMapTypeId;
+}
+
 // Real GIS Map Layer Configurations & Official Licensing Attributions
 export const MAP_LAYERS_CONFIG = {
+  roadmap: {
+    id: 'roadmap',
+    name: 'Normal Map (Roadmap)',
+    shortName: 'Normal',
+    badge: 'Streets & Buildings',
+    description: 'Clean Google Maps-style roadmap with roads, streets, building footprints, house layouts, and village labels.',
+    provider: 'Google Maps (MapTypeId.ROADMAP)',
+    license: 'Google Maps Platform',
+    nativeZoom: 'Native Zoom 20 (Building Footprints)',
+    type: 'Street / Vector Raster'
+  },
   satellite: {
     id: 'satellite',
-    name: 'Satellite Imagery',
+    name: 'Satellite Map (Aerial)',
     shortName: 'Satellite',
-    badge: 'Optical Imagery',
-    description: 'High-resolution true-color orbital and aerial photography from commercial and government observation sensors.',
-    provider: 'Esri World Imagery (Maxar, USDA FSA, USGS)',
-    license: 'Esri Master Agreement / Open GIS Tier',
-    nativeZoom: 'Native Zoom 18 (Upscaled to 20)',
+    badge: 'Real Aerial Imagery',
+    description: 'Real high-resolution aerial and satellite photography showing houses, rooftops, agricultural plots, trees, and roads.',
+    provider: 'Google Satellite (MapTypeId.SATELLITE)',
+    license: 'Google Maps Platform',
+    nativeZoom: 'Native Zoom 20 (Rooftop & Parcel Level)',
     type: 'Orbital Imagery'
-  },
-  osm: {
-    id: 'osm',
-    name: 'Standard Road Map',
-    shortName: 'Road Map',
-    badge: 'Street Network',
-    description: 'Crisp street network, arterial highways, town & village connectivity, and administrative boundaries.',
-    provider: 'OpenStreetMap Contributors',
-    license: 'Open Database License (ODbL 1.0)',
-    nativeZoom: 'Native Zoom 19 (Upscaled to 20)',
-    type: 'Street / Vector Raster'
   },
   hybrid: {
     id: 'hybrid',
-    name: 'Hybrid Map',
+    name: 'Hybrid Map (Satellite + Labels)',
     shortName: 'Hybrid',
     badge: 'Satellite + Corridors',
-    description: 'High-resolution satellite imagery combined with readable road networks, place names, and village labels.',
-    provider: 'Esri World Imagery & Reference Layer',
-    license: 'Esri Master & ODbL Open Cartography',
-    nativeZoom: 'Native Zoom 18 (Upscaled to 20)',
+    description: 'Real satellite photography combined with high-contrast road corridors, town/village names, and survey connectivity.',
+    provider: 'Google Hybrid (MapTypeId.HYBRID)',
+    license: 'Google Maps Platform',
+    nativeZoom: 'Native Zoom 20 (Satellite + Vector Labels)',
     type: 'Dual-Layer Hybrid'
   },
   terrain: {
@@ -162,10 +176,43 @@ export const MAP_LAYERS_CONFIG = {
     shortName: 'Terrain',
     badge: 'Topographic Relief',
     description: 'Topographic elevation contours, hill shading, water catchment basins, and natural geographical relief.',
-    provider: 'Esri World Topographic / USGS / SRTM',
-    license: 'USGS / SRTM NASA / OpenStreetMap Community',
-    nativeZoom: 'Native Zoom 19 (Upscaled to 20)',
+    provider: 'Google Terrain (MapTypeId.TERRAIN)',
+    license: 'Google Maps Platform',
+    nativeZoom: 'Native Zoom 18',
     type: 'Topographic / Physical'
+  },
+  osm: {
+    id: 'osm',
+    name: 'OpenStreetMap Standard',
+    shortName: 'OSM Standard',
+    badge: 'Open Cartography',
+    description: 'Crisp street network, arterial highways, town & village connectivity, and administrative boundaries.',
+    provider: 'OpenStreetMap Contributors',
+    license: 'Open Database License (ODbL 1.0)',
+    nativeZoom: 'Native Zoom 19 (Upscaled to 20)',
+    type: 'Street / Vector Raster'
+  },
+  voyager: {
+    id: 'voyager',
+    name: 'CartoDB Voyager Layout',
+    shortName: 'Voyager Layout',
+    badge: 'Building Footprints',
+    description: 'Clean building footprints, house layouts and road hierarchy.',
+    provider: 'CARTO / OpenStreetMap',
+    license: 'CC-BY-SA',
+    nativeZoom: 'Native Zoom 19 (Upscaled to 20)',
+    type: 'Building Footprints'
+  },
+  dark: {
+    id: 'dark',
+    name: 'CartoDB Dark Matter',
+    shortName: 'Dark Matter',
+    badge: 'High Contrast Dark',
+    description: 'High-contrast dark map background with visible roads and labels for low-light observation.',
+    provider: 'CARTO Cartography',
+    license: 'CC-BY-SA',
+    nativeZoom: 'Native Zoom 19 (Upscaled to 20)',
+    type: 'Dark Cartography'
   }
 };
 
@@ -246,7 +293,14 @@ export function calculateGeodesicMeasurements(layer) {
   };
 }
 
-export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D, globalTheme, onToggleGlobalTheme }) {
+export default function GisMapViewer({ 
+  onSelectParcelForInspection, 
+  onSwitchTo3D, 
+  globalTheme, 
+  onToggleGlobalTheme,
+  externalNavTarget,
+  onParcelSelect
+}) {
   // Navigation & Location Hierarchy State
   const [locationsHierarchy, setLocationsHierarchy] = useState([]);
   const [selectedDistrict, setSelectedDistrict] = useState('Tumakuru');
@@ -276,8 +330,9 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
   const [showCandidatesModal, setShowCandidatesModal] = useState(false);
   const [noMatchBanner, setNoMatchBanner] = useState(null);
 
-  // Map settings (Default to standard road map for 100% reliable street/village coverage)
-  const [mapMode, setMapMode] = useState('osm'); // 'satellite', 'osm', 'hybrid', 'terrain'
+  // Map settings (Default to Normal Google Maps Roadmap; supporting MapTypeId.ROADMAP, SATELLITE, HYBRID)
+  const [mapMode, setMapMode] = useState('roadmap'); // 'roadmap', 'satellite', 'hybrid', 'terrain', 'osm', 'voyager', 'dark'
+  const [isHybrid, setIsHybrid] = useState(true); // Optional Hybrid layer toggle (roads and labels over satellite imagery)
   const [showLayerPanel, setShowLayerPanel] = useState(false);
   const layerPanelRef = useRef(null);
   const layerButtonRef = useRef(null);
@@ -320,9 +375,8 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
   const [isLoadingBuildings, setIsLoadingBuildings] = useState(false);
   const [showSurveyLabels, setShowSurveyLabels] = useState(true);
 
-  // Drawing Vertex Editing & GeoJSON Import
+  // Drawing Vertex Editing
   const [isEditingBoundary, setIsEditingBoundary] = useState(false);
-  const [isImportingGeoJson, setIsImportingGeoJson] = useState(false);
   const [showLayerControlsModal, setShowLayerControlsModal] = useState(false);
 
   // 🌓 Dark / Light Theme State
@@ -388,6 +442,36 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     setMapMode(modeKey);
   };
 
+  // Google Maps JavaScript API MapTypeId switching logic (Normal, Satellite, Hybrid)
+  const handleSwitchMapType = (mapTypeId) => {
+    setIsTileLoading(true);
+    setTileError(null);
+    setTileWarning(null);
+
+    const typeIdStr = String(mapTypeId || '').toLowerCase();
+    if (typeIdStr.includes('roadmap') || typeIdStr === 'normal') {
+      handleSelectMapLayer('roadmap');
+    } else if (typeIdStr.includes('satellite')) {
+      handleSelectMapLayer(isHybrid ? 'hybrid' : 'satellite');
+    } else if (typeIdStr.includes('hybrid')) {
+      setIsHybrid(true);
+      handleSelectMapLayer('hybrid');
+    } else if (typeIdStr.includes('terrain')) {
+      handleSelectMapLayer('terrain');
+    } else {
+      handleSelectMapLayer(mapTypeId);
+    }
+  };
+
+  // Toggle optional Hybrid layer (roads and labels over satellite imagery)
+  const toggleHybridOverlay = (enableHybrid) => {
+    setIsHybrid(enableHybrid);
+    if (mapMode === 'satellite' || mapMode === 'hybrid') {
+      setIsTileLoading(true);
+      handleSelectMapLayer(enableHybrid ? 'hybrid' : 'satellite');
+    }
+  };
+
   // 🧭 Distance Measurement State
   const [isMeasuringDistance, setIsMeasuringDistance] = useState(false);
   const isMeasuringDistanceRef = useRef(false);
@@ -443,7 +527,6 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
   const buildingsLayerGroupRef = useRef(null);
   const surveyLabelsGroupRef = useRef(null);
   const importedBoundaryLayerRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   // 1. Fetch Location Hierarchy on Mount
   useEffect(() => {
@@ -489,6 +572,51 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     // Base Tile Providers
     // SVG fallback for broken/missing tiles prevents ugly browser broken image icons
     const transparentTileUrl = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="rgba(240,240,240,0.05)"/></svg>';
+
+    // 0. Google Maps Tile Providers (MapTypeId.ROADMAP, MapTypeId.SATELLITE, MapTypeId.HYBRID, MapTypeId.TERRAIN)
+    // A. Normal Map: Roads, streets, buildings, houses, landmarks, and city/village labels
+    const googleRoadmapLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      minZoom: 3,
+      maxZoom: 21,
+      maxNativeZoom: 20,
+      subdomains: ['0', '1', '2', '3'],
+      errorTileUrl: transparentTileUrl,
+      crossOrigin: true,
+      attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">Google Maps</a>'
+    });
+
+    // B. Satellite Map: Real satellite & aerial imagery of rooftops, farm fields, trees, and land parcels
+    const googleSatelliteLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      minZoom: 3,
+      maxZoom: 21,
+      maxNativeZoom: 20,
+      subdomains: ['0', '1', '2', '3'],
+      errorTileUrl: transparentTileUrl,
+      crossOrigin: true,
+      attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">Google Satellite</a>'
+    });
+
+    // C. Hybrid Map: Real aerial imagery with roads, street names, and location labels overlaid
+    const googleHybridLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+      minZoom: 3,
+      maxZoom: 21,
+      maxNativeZoom: 20,
+      subdomains: ['0', '1', '2', '3'],
+      errorTileUrl: transparentTileUrl,
+      crossOrigin: true,
+      attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">Google Maps Imagery &amp; Labels</a>'
+    });
+
+    // D. Terrain Map: Topographic contours, relief, and road network
+    const googleTerrainLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+      minZoom: 3,
+      maxZoom: 21,
+      maxNativeZoom: 18,
+      subdomains: ['0', '1', '2', '3'],
+      errorTileUrl: transparentTileUrl,
+      crossOrigin: true,
+      attribution: '&copy; <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer">Google Maps Terrain</a>'
+    });
 
     // 1. Standard Road Map (OpenStreetMap) - standard tile endpoint & compliance with OSM tile policy
     const osmLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -578,7 +706,7 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     let pendingTilesCount = 0;
     let failedTilesCount = 0;
 
-    [osmLayer, voyagerLayer, topoLayer, terrainLayer, satelliteLayer, darkLayer, labelsLayer].forEach((layer) => {
+    [googleRoadmapLayer, googleSatelliteLayer, googleHybridLayer, googleTerrainLayer, osmLayer, voyagerLayer, topoLayer, terrainLayer, satelliteLayer, darkLayer, labelsLayer].forEach((layer) => {
       layer.on('tileloadstart', () => {
         pendingTilesCount++;
         setIsTileLoading(true);
@@ -610,17 +738,20 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     });
 
     // Set initial base layer matching mapMode
-    const initialBase = mapMode === 'satellite' ? satelliteLayer :
-                        mapMode === 'hybrid' ? hybridGroup :
-                        mapMode === 'terrain' ? terrainLayer :
-                        osmLayer;
+    const initialBase = (mapMode === 'satellite') ? (isHybrid ? googleHybridLayer : googleSatelliteLayer) :
+                        (mapMode === 'hybrid') ? googleHybridLayer :
+                        (mapMode === 'terrain') ? googleTerrainLayer :
+                        (mapMode === 'osm') ? osmLayer :
+                        (mapMode === 'voyager') ? voyagerLayer :
+                        (mapMode === 'dark') ? darkLayer :
+                        googleRoadmapLayer;
 
     // Create Map Instance Centered on Tumakuru, Karnataka, India
     const map = L.map(mapContainerRef.current, {
       center: [13.3409, 77.1010], // Tumakuru city center
       zoom: 12,
-      minZoom: 4,
-      maxZoom: 20,
+      minZoom: 3,
+      maxZoom: 21,
       zoomControl: false, // Using Google Maps-style custom floating zoom controls
       scrollWheelZoom: true,
       touchZoom: true,
@@ -636,10 +767,18 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
 
     mapRef.current = map;
     baseLayersRef.current = {
-      satellite: satelliteLayer,
+      roadmap: googleRoadmapLayer,
+      google_roadmap: googleRoadmapLayer,
+      satellite: googleSatelliteLayer,
+      google_satellite: googleSatelliteLayer,
+      hybrid: googleHybridLayer,
+      google_hybrid: googleHybridLayer,
+      terrain: googleTerrainLayer,
+      google_terrain: googleTerrainLayer,
+      satellite_esri: satelliteLayer,
       osm: osmLayer,
-      hybrid: hybridGroup,
-      terrain: terrainLayer,
+      hybrid_esri: hybridGroup,
+      terrain_esri: terrainLayer,
       topo: topoLayer,
       voyager: voyagerLayer,
       dark: darkLayer
@@ -658,7 +797,7 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     const measureGroup = L.featureGroup().addTo(map);
     measureLayerGroupRef.current = measureGroup;
 
-    const surveyLabelsGroup = L.layerGroup().addTo(map);
+    const surveyLabelsGroup = L.featureGroup().addTo(map);
     surveyLabelsGroupRef.current = surveyLabelsGroup;
 
     const buildingsGroup = L.geoJSON(null, {
@@ -893,24 +1032,67 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     }, 200);
   };
 
-  // 3. Switch Base Tile Layer when mapMode changes
+  // 3. Switch Base Tile Layer when mapMode or isHybrid changes (Preserves user position & zoom)
   useEffect(() => {
     if (!mapRef.current || !baseLayersRef.current) return;
     const map = mapRef.current;
-    const { osm, voyager, dark, satellite, hybrid, topo, terrain } = baseLayersRef.current;
+    const allLayers = Object.values(baseLayersRef.current);
 
-    [osm, voyager, dark, satellite, hybrid, topo, terrain].forEach((l) => {
+    allLayers.forEach((l) => {
       if (l && map.hasLayer(l)) map.removeLayer(l);
     });
 
-    const targetLayer = baseLayersRef.current[mapMode] || baseLayersRef.current.osm;
+    let targetKey = mapMode;
+    if (targetKey === 'normal' || targetKey === 'ROADMAP') targetKey = 'roadmap';
+    if (targetKey === 'SATELLITE') targetKey = isHybrid ? 'hybrid' : 'satellite';
+    if (targetKey === 'HYBRID') targetKey = 'hybrid';
+    if ((targetKey === 'satellite' || targetKey === 'google_satellite') && isHybrid) {
+      targetKey = 'hybrid';
+    }
+
+    const targetLayer = baseLayersRef.current[targetKey] || baseLayersRef.current.roadmap || baseLayersRef.current.osm;
     if (targetLayer) {
       targetLayer.addTo(map);
+
+      // Keep vector layers, parcel polygons, and boundaries visible above base tiles safely
+      if (districtLayersGroupRef.current && typeof districtLayersGroupRef.current.bringToFront === 'function') {
+        districtLayersGroupRef.current.bringToFront();
+      }
+      if (parcelLayersGroupRef.current && typeof parcelLayersGroupRef.current.bringToFront === 'function') {
+        parcelLayersGroupRef.current.bringToFront();
+      }
+      if (drawnItemsGroupRef.current && typeof drawnItemsGroupRef.current.bringToFront === 'function') {
+        drawnItemsGroupRef.current.bringToFront();
+      }
+      if (highlightLayerRef.current && typeof highlightLayerRef.current.bringToFront === 'function') {
+        highlightLayerRef.current.bringToFront();
+      }
+      if (placeMarkerGroupRef.current && typeof placeMarkerGroupRef.current.bringToFront === 'function') {
+        placeMarkerGroupRef.current.bringToFront();
+      }
+      if (surveyLabelsGroupRef.current && typeof surveyLabelsGroupRef.current.bringToFront === 'function') {
+        surveyLabelsGroupRef.current.bringToFront();
+      }
+
       setTileWarning(null);
       setTileError(null);
     }
     map.invalidateSize();
-  }, [mapMode]);
+  }, [mapMode, isHybrid]);
+
+  // Synchronize AI Assistant external map navigation triggers
+  useEffect(() => {
+    if (externalNavTarget && mapRef.current && externalNavTarget.lat && externalNavTarget.lng) {
+      if (externalNavTarget.district) {
+        setSelectedDistrict(externalNavTarget.district);
+      }
+      mapRef.current.flyTo(
+        [externalNavTarget.lat, externalNavTarget.lng], 
+        externalNavTarget.zoom || 14, 
+        { duration: 1.2 }
+      );
+    }
+  }, [externalNavTarget]);
 
   // Toggle Cadastral Parcels Layer
   useEffect(() => {
@@ -1475,6 +1657,11 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
   // 6. Select Parcel & Fetch Full Record Details
   const selectParcel = async (parcel) => {
     setSelectedParcel(parcel);
+    if (typeof onParcelSelect === 'function') {
+      try {
+        onParcelSelect(parcel);
+      } catch (e) {}
+    }
     setLoadingDetails(true);
     setNoMatchBanner(null);
 
@@ -1979,72 +2166,7 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     }
   };
 
-  // 📤 Export GeoJSON
-  const handleExportGeoJson = (specificParcel = null) => {
-    let geojsonContent = null;
-    let filename = 'bhoomi_plots.geojson';
 
-    if (specificParcel && specificParcel.geometry) {
-      geojsonContent = {
-        type: 'Feature',
-        geometry: specificParcel.geometry,
-        properties: {
-          parcel_id: specificParcel.id || specificParcel.parcel_id,
-          survey_number: specificParcel.survey_number,
-          hissa_number: specificParcel.hissa_number,
-          village: specificParcel.village,
-          taluk: specificParcel.taluk,
-          district: specificParcel.district,
-          area_acres: specificParcel.area_acres || specificParcel.extent_acres,
-          primary_owner: specificParcel.primary_owner || (specificParcel.records && specificParcel.records[0]?.owner_name),
-          land_type: specificParcel.land_type || 'Agricultural',
-          verification_status: specificParcel.verification_status
-        }
-      };
-      filename = `parcel_${specificParcel.survey_number}_${specificParcel.village}.geojson`;
-    } else if (drawnMeasurements && drawnItemsGroupRef.current && drawnItemsGroupRef.current.getLayers().length > 0) {
-      const drawnLayer = drawnItemsGroupRef.current.getLayers()[0];
-      geojsonContent = drawnLayer.toGeoJSON();
-      filename = 'user_drawn_plot.geojson';
-    } else {
-      const features = parcels.filter(p => p.geometry).map(p => ({
-        type: 'Feature',
-        geometry: p.geometry,
-        properties: {
-          parcel_id: p.id || p.parcel_id,
-          survey_number: p.survey_number,
-          hissa_number: p.hissa_number,
-          village: p.village,
-          taluk: p.taluk,
-          district: p.district,
-          area_acres: p.area_acres || p.extent_acres,
-          primary_owner: p.primary_owner || (p.records && p.records[0]?.owner_name),
-          verification_status: p.verification_status
-        }
-      }));
-      geojsonContent = {
-        type: 'FeatureCollection',
-        features
-      };
-      filename = `karnataka_parcels_${selectedDistrict.toLowerCase()}.geojson`;
-    }
-
-    if (!geojsonContent) {
-      showToast('No plot geometry available to export.', 'error');
-      return;
-    }
-
-    const blob = new Blob([JSON.stringify(geojsonContent, null, 2)], { type: 'application/geo+json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    showToast(`Exported ${filename}`, 'success');
-  };
 
   // ⚖️ Known-Area Comparison Calculation
   const computeAreaComparison = () => {
@@ -2097,74 +2219,7 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
     setDimOtherParcels(false);
   };
 
-  // GeoJSON Custom Boundary Importer
-  const handleGeoJsonFileUpload = async (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
 
-    try {
-      setIsImportingGeoJson(true);
-      const text = await file.text();
-      const geojsonObj = JSON.parse(text);
-
-      const res = await importGeojsonBoundary(geojsonObj);
-      const data = res.data;
-
-      if (!data.success) {
-        showToast(data.message || 'Failed to import boundary GeoJSON.', 'error');
-        return;
-      }
-
-      if (importedBoundaryLayerRef.current && mapRef.current) {
-        importedBoundaryLayerRef.current.clearLayers();
-        const importedLayer = L.geoJSON(data.feature, {
-          className: 'imported-boundary-path',
-          style: {
-            color: '#8b5cf6',
-            weight: 2.5,
-            fillColor: '#c4b5fd',
-            fillOpacity: 0.35,
-            dashArray: '5, 5'
-          }
-        });
-
-        importedLayer.bindTooltip(`
-          <div style="font-size:11px;">
-            <strong style="color:#7c3aed;">Imported Sketch / Survey Boundary</strong><br/>
-            <span>Area: ${data.area_acres} Ac (${data.area_sqm} m&sup2;)</span><br/>
-            <span style="font-size:10px; color:#64748b;">Not legal boundary &bull; Subject to physical survey</span>
-          </div>
-        `, { sticky: true });
-
-        importedBoundaryLayerRef.current.addLayer(importedLayer);
-        mapRef.current.fitBounds(importedLayer.getBounds(), { padding: [50, 50], maxZoom: 18 });
-
-        setDrawnMeasurements({
-          acresTotal: data.area_acres,
-          sqMeters: data.area_sqm,
-          hectares: data.area_hectares
-        });
-
-        if (data.spatial_match) {
-          setSpatialQueryResult(data.spatial_match);
-          if (data.spatial_match.match_type === 'STRONG_MATCH' && data.spatial_match.matched_parcel) {
-            selectParcel(data.spatial_match.matched_parcel);
-          } else if (data.spatial_match.candidates && data.spatial_match.candidates.length > 0) {
-            setCandidateParcels(data.spatial_match.candidates);
-            setShowCandidatesModal(true);
-          }
-        }
-
-        showToast(`Imported "${data.filename || file.name}": ${data.area_acres} Acres`, 'success');
-      }
-    } catch (err) {
-      console.error('GeoJSON import error:', err);
-      showToast('Invalid GeoJSON file. Ensure valid Polygon coordinates.', 'error');
-    } finally {
-      setIsImportingGeoJson(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   // 7. Handle Spatial Drawing Query (POST /api/land/parcels/identify)
   const handleDrawIdentify = async (drawnGeoJson, measurements = null) => {
@@ -3245,10 +3300,10 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
                 </div>
                 <button
                   type="button"
-                  onClick={() => setMapMode('osm')}
+                  onClick={() => handleSwitchMapType(window.google?.maps?.MapTypeId?.ROADMAP || 'roadmap')}
                   className="px-2 py-0.5 rounded-lg bg-emerald-600 text-white text-[11px] font-bold hover:bg-emerald-700 whitespace-nowrap shadow-xs"
                 >
-                  Switch to Road Map
+                  Switch to Normal Road Map
                 </button>
               </div>
             )}
@@ -3374,35 +3429,7 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
                 </button>
               )}
 
-              {/* Import Custom GeoJSON Boundary */}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                disabled={isImportingGeoJson}
-                title="Import GeoJSON Cadastral Boundary Sketch"
-                className="px-2.5 py-1.5 rounded-xl bg-white/95 hover:bg-purple-50 text-slate-800 hover:text-purple-700 border border-slate-200 text-xs font-bold shadow-md transition flex items-center gap-1"
-              >
-                <Upload className="w-3.5 h-3.5 text-purple-600" />
-                <span className="hidden sm:inline">Import GeoJSON</span>
-              </button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                accept=".geojson,.json"
-                onChange={handleGeoJsonFileUpload}
-                className="hidden"
-              />
 
-              {/* Export GeoJSON */}
-              <button
-                type="button"
-                onClick={() => handleExportGeoJson(selectedParcel)}
-                title="Export Selected Plot or Regional Parcels as GeoJSON"
-                className="px-2.5 py-1.5 rounded-xl bg-white/95 hover:bg-emerald-50 text-slate-800 hover:text-emerald-700 border border-slate-200 text-xs font-bold shadow-md transition flex items-center gap-1"
-              >
-                <Download className="w-3.5 h-3.5 text-emerald-600" />
-                <span className="hidden sm:inline">Export</span>
-              </button>
 
               {/* Regional Overview Reset */}
               <button
@@ -3499,13 +3526,116 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
                 )}
               </button>
 
+              {/* GOOGLE MAPS-STYLE DUAL MODE SWITCHER (Normal vs Satellite + Optional Hybrid Layer) */}
+              <div className="flex items-center p-1 bg-white/95 backdrop-blur-md rounded-2xl border-2 border-slate-200/90 shadow-lg gap-1">
+                {/* 1. Normal Mode Preview Button */}
+                <button
+                  type="button"
+                  onClick={() => handleSwitchMapType(window.google?.maps?.MapTypeId?.ROADMAP || 'roadmap')}
+                  title="Switch to Normal Map Mode: Roads, Streets, Building Footprints, City & Village Labels (Google Maps ROADMAP)"
+                  className={`group relative flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 transition-all ${
+                    (mapMode === 'roadmap' || mapMode === 'normal' || mapMode === 'osm' || mapMode === 'voyager')
+                      ? 'bg-emerald-50/90 border-emerald-500 shadow-sm ring-2 ring-emerald-200/70'
+                      : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg overflow-hidden border border-slate-300 shadow-2xs flex-shrink-0 bg-slate-100">
+                    <img
+                      src="https://mt1.google.com/vt/lyrs=m&x=1468&y=945&z=11"
+                      alt="Normal Map"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+                    <span className="absolute bottom-0.5 right-0.5 text-[7px] font-black px-0.5 rounded bg-white/95 text-slate-800 leading-none">
+                      MAP
+                    </span>
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className={`text-xs font-black tracking-tight flex items-center gap-1 ${
+                      (mapMode === 'roadmap' || mapMode === 'normal' || mapMode === 'osm' || mapMode === 'voyager')
+                        ? 'text-emerald-800'
+                        : 'text-slate-800'
+                    }`}>
+                      Normal
+                      {(mapMode === 'roadmap' || mapMode === 'normal' || mapMode === 'osm' || mapMode === 'voyager') && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      )}
+                    </span>
+                    <span className="text-[9px] text-slate-500 font-semibold leading-tight hidden sm:inline">
+                      Roads &amp; Buildings
+                    </span>
+                  </div>
+                </button>
+
+                {/* 2. Satellite Mode Preview Button */}
+                <button
+                  type="button"
+                  onClick={() => handleSwitchMapType(isHybrid ? (window.google?.maps?.MapTypeId?.HYBRID || 'hybrid') : (window.google?.maps?.MapTypeId?.SATELLITE || 'satellite'))}
+                  title="Switch to Satellite Map Mode: Real Satellite & Aerial Imagery (Google Maps SATELLITE / HYBRID)"
+                  className={`group relative flex items-center gap-2 px-2.5 py-1.5 rounded-xl border-2 transition-all ${
+                    (mapMode === 'satellite' || mapMode === 'hybrid' || mapMode === 'satellite_esri')
+                      ? 'bg-blue-50/90 border-blue-500 shadow-sm ring-2 ring-blue-200/70'
+                      : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-lg overflow-hidden border border-slate-300 shadow-2xs flex-shrink-0 bg-slate-900">
+                    <img
+                      src="https://mt1.google.com/vt/lyrs=s&x=1468&y=945&z=11"
+                      alt="Satellite Map"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                    <span className="absolute bottom-0.5 right-0.5 text-[7px] font-black px-0.5 rounded bg-blue-600 text-white leading-none">
+                      SAT
+                    </span>
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span className={`text-xs font-black tracking-tight flex items-center gap-1 ${
+                      (mapMode === 'satellite' || mapMode === 'hybrid' || mapMode === 'satellite_esri')
+                        ? 'text-blue-800'
+                        : 'text-slate-800'
+                    }`}>
+                      Satellite
+                      {(mapMode === 'satellite' || mapMode === 'hybrid' || mapMode === 'satellite_esri') && (
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                      )}
+                    </span>
+                    <span className="text-[9px] text-slate-500 font-semibold leading-tight hidden sm:inline">
+                      Real Aerial Imagery
+                    </span>
+                  </div>
+                </button>
+
+                {/* 3. Optional Hybrid Layer Toggle (Roads and Labels on Satellite) */}
+                <div className="pl-1 border-l border-slate-200 flex items-center">
+                  <label
+                    title="Toggle Hybrid Layer: Display road network, village names & location labels over satellite imagery (MapTypeId.HYBRID)"
+                    className={`inline-flex items-center gap-1.5 px-2 py-1.5 rounded-xl cursor-pointer text-xs font-bold transition select-none ${
+                      isHybrid && (mapMode === 'satellite' || mapMode === 'hybrid')
+                        ? 'bg-blue-100/70 text-blue-900'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isHybrid}
+                      onChange={(e) => toggleHybridOverlay(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 border-slate-300 cursor-pointer accent-blue-600"
+                    />
+                    <span className="text-[10px] sm:text-[11px] whitespace-nowrap">
+                      Labels (Hybrid)
+                    </span>
+                  </label>
+                </div>
+              </div>
+
               {/* MAP LAYER SWITCHER (Dedicated Upper-Right Button & Clean Flyout Panel) */}
               <div className="relative z-30" ref={layerPanelRef}>
                 <button
                   ref={layerButtonRef}
                   type="button"
                   onClick={() => setShowLayerPanel((prev) => !prev)}
-                  title="Switch Map Layers (Satellite, Road Map, Hybrid, Terrain)"
+                  title="Switch Map Layers (Normal, Satellite, Hybrid, Terrain, OSM, Voyager, Dark)"
                   aria-expanded={showLayerPanel}
                   className={`px-3 py-1.5 rounded-xl border-2 text-xs font-black shadow-lg transition-all flex items-center gap-2 ${
                     showLayerPanel
@@ -3516,10 +3646,10 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
                   <div className="p-1 rounded-lg bg-pink-100/90 text-pink-600">
                     <Layers className="w-4 h-4" />
                   </div>
-                  <div className="flex flex-col items-start text-left leading-tight">
-                    <span className="text-[9px] uppercase tracking-wider text-pink-600/90 font-extrabold">Layer</span>
+                  <div className="flex flex-col items-start text-left leading-tight hidden sm:flex">
+                    <span className="text-[9px] uppercase tracking-wider text-pink-600/90 font-extrabold">Layers</span>
                     <span className="text-xs font-black text-slate-900 flex items-center gap-1">
-                      {MAP_LAYERS_CONFIG[mapMode]?.shortName || 'Road Map'}
+                      {MAP_LAYERS_CONFIG[mapMode]?.shortName || 'Normal'}
                       <span className="w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse"></span>
                     </span>
                   </div>
@@ -3576,10 +3706,13 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
                             <div className="flex items-start justify-between gap-2 mb-1.5">
                               <div className="flex items-center gap-2">
                                 <span className={`p-1.5 rounded-lg ${isSelected ? 'bg-pink-500 text-white shadow-xs' : 'bg-pink-50 text-pink-600 border border-pink-200'}`}>
+                                  {cfg.id === 'roadmap' && <MapIcon className="w-4 h-4" />}
                                   {cfg.id === 'satellite' && <Satellite className="w-4 h-4" />}
-                                  {cfg.id === 'osm' && <MapIcon className="w-4 h-4" />}
                                   {cfg.id === 'hybrid' && <Globe className="w-4 h-4" />}
                                   {cfg.id === 'terrain' && <Compass className="w-4 h-4" />}
+                                  {cfg.id === 'osm' && <Layers className="w-4 h-4" />}
+                                  {cfg.id === 'voyager' && <Building2 className="w-4 h-4" />}
+                                  {cfg.id === 'dark' && <Moon className="w-4 h-4" />}
                                 </span>
                                 <div>
                                   <div className="font-black text-xs text-slate-900 leading-tight">
@@ -4120,23 +4253,13 @@ export default function GisMapViewer({ onSelectParcelForInspection, onSwitchTo3D
                       <span>Dispatch Field Revenue Inspector</span>
                     </button>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => handleExportGeoJson(selectedParcel)}
-                        className="py-2 px-3 rounded-xl font-semibold text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center justify-center space-x-1 transition"
-                      >
-                        <Download className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Export GeoJSON</span>
-                      </button>
-
-                      <button
-                        onClick={() => setShowGeoJsonModal(true)}
-                        className="py-2 px-3 rounded-xl font-semibold text-xs bg-white hover:bg-emerald-50 text-slate-700 border border-slate-200 flex items-center justify-center space-x-1 transition"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-slate-500" />
-                        <span>Raw GeoJSON</span>
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setShowGeoJsonModal(true)}
+                      className="w-full py-2 px-3 rounded-xl font-semibold text-xs bg-white hover:bg-emerald-50 text-slate-700 border border-slate-200 flex items-center justify-center space-x-1 transition"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-slate-500" />
+                      <span>Raw GeoJSON Details</span>
+                    </button>
 
                     <div className="grid grid-cols-2 gap-2">
                       <button

@@ -405,7 +405,7 @@ export default function ExtractionVisualizer({ extractionResult, recordId, onOpe
             </div>
           </div>
 
-          {/* GIS & Blockchain Geotag Summary */}
+          {/* Cadastral Geodesic Summary */}
           <div className="mt-4 p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs">
             <div className="flex items-center justify-between">
               <span className="font-bold text-slate-300 flex items-center gap-1.5">
@@ -414,15 +414,6 @@ export default function ExtractionVisualizer({ extractionResult, recordId, onOpe
               </span>
               <span className="font-mono text-cyan-300 text-[11px]">
                 {formData.latitude ? `${formData.latitude.toFixed(5)}° N, ${formData.longitude.toFixed(5)}° E` : "13.2924° N, 77.8012° E"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between pt-1 border-t border-slate-800/80">
-              <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-indigo-400" />
-                Blockchain Audit Hash
-              </span>
-              <span className="font-mono text-indigo-300 text-[11px] truncate max-w-[240px]">
-                {record?.blockchain_tx_hash || "Anchored in Block #1"}
               </span>
             </div>
           </div>
